@@ -6,30 +6,30 @@ The dashboard will then be used for manual action and you should be able to mark
 
 ## Policy Tasks
 
-| Policy Clause | Description | Already Available? | Implementation Needed? | Potential Limitations |
-|:---------------|:-------------|:--------------------|:------------------------:|:--------------------|
-| 2.1 | Check that organisational email address is attached to member profiles | N/A | Yes | Github API can only get user emails if they're provided in their public profile - most of the time this field is empty |
-| 2.2 | Check that user profiles are filled out with information | N/A | No | N/A |
-| 3. | Check that all users who are members of the org should be there | N/A | Yes | Will need another reference point to compare against Github |
-| 4.1 | All repos should be made in ONSdigital | N/A | No | N/A |
-| 4.2 | Check that repo names follow conventions (i.e hyphens/underscores, all lower case, etc.) | N/A | Yes | None |
-| 4.3 | Check private/internal repos for a PIRR.md file. Should not be empty. | N/A | Yes | None |
-| 4.4 | All repos should have a README.md | N/A | Yes | None |
-| 4.5 | Check public repos for a license file. Should not be empty. | N/A | Yes | None |
-| 4.6 | All repos should have a .gitignore | N/A | Yes | None |
-| 4.7 | All repos should have good quality documentation | N/A | No | Might be something for SDP - Could check if /docs is present |
-| 4.8 | Any repository with no updates for 1 year and is no longer used should be archived | N/A | Yes | None |
-| 5.1 | Check Team/Organisation naming | N/A | No | None |
-| 5.2 | Team Structure | N/A | No | None |
-| 5.3 | Code of Conduct | N/A | No | None |
-| 5.4 | Use PRs | N/A | No | None |
-| 5.5 | Check for PR's outside of organisation | N/A | Yes | None |
-| 5.6 | Branch Usage | N/A | No | None |
-| 5.7 | Check Branch Protection Rules (Main Branch Only) are enforced | N/A | Yes | None |
-| 5.8 | Check that commits are signed | N/A | Yes | None |
-| 6.1 | Personal privacy settings | N/A | No | None |
-| 6.2 | Check that dependabot and secret scanning, etc are enabled | Yes (organisation insights tab) | No | None |
-| 6.2.1~4 | Check for any dependabot and security scanning alerts | No | Yes | None |
+| Policy Clause | Description | Already Available? | Implementation Needed? | Potential Limitations | Complexity (1-10) | Time to Complete |
+|:--------------|:------------|:-------------------|:----------------------:|:----------------------|:------------------|:-----------------|
+| 2.1 | Check that organisational email address is attached to member profiles | N/A | Yes | Github API can only get user emails if they're provided in their public profile - most of the time this field is empty | 8 | ? |
+| 2.2 | Check that user profiles are filled out with information | N/A | No | N/A | N/A | N/A |
+| 3. | Check that all users who are members of the org should be there | N/A | Yes | Will need another reference point to compare against Github | 6 | Depends on reference source |
+| 4.1 | All repos should be made in ONSdigital | N/A | No | N/A | N/A | N/A |
+| 4.2 | Check that repo names follow conventions (i.e hyphens/underscores, all lower case, etc.) | N/A | Yes | None | 2 | 1 Day |
+| 4.3 | Check private/internal repos for a PIRR.md file. Should not be empty. | N/A | Yes | None | 4 | 2 Days (Will need to figure out repo content access through the API) |
+| 4.4 | All repos should have a README.md | N/A | Yes | None | 3 | 1 Day |
+| 4.5 | Check public repos for a license file. Should not be empty. | N/A | Yes | None | 4 | 2 Days (Will need to figure out repo content access through the API) |
+| 4.6 | All repos should have a .gitignore | N/A | Yes | None | 2 | 1 Day |
+| 4.7 | All repos should have good quality documentation | N/A | No | Might be something for SDP - Could check if /docs is present | N/A | N/A |
+| 4.8 | Any repository with no updates for 1 year and is no longer used should be archived | N/A | Yes | None | 2 | 1 Day |
+| 5.1 | Check Team/Organisation naming | N/A | No | None | N/A | N/A |
+| 5.2 | Team Structure | N/A | No | None | N/A | N/A |
+| 5.3 | Code of Conduct | N/A | No | None | N/A | N/A |
+| 5.4 | Use PRs | N/A | No | None | N/A | N/A |
+| 5.5 | Check for PR's outside of organisation | N/A | Yes | None | 4 | 2 Days (Will need to figure out PR's using Github API) |
+| 5.6 | Branch Usage | N/A | No | None | N/A | N/A |
+| 5.7 | Check Branch Protection Rules (Main Branch Only) are enforced | N/A | Yes | None | 4 | 2 Days (Will need to figure out branch protection enpoint) |
+| 5.8 | Check that commits are signed | N/A | Yes | None | 4 | 2 Days (Will need to figure out commits endpoint) |
+| 6.1 | Personal privacy settings | N/A | No | None | N/A | N/A |
+| 6.2 | Check that dependabot and secret scanning, etc are enabled | Yes (organisation insights tab) | No | None | N/A | N/A |
+| 6.2.1~4 | Check for any dependabot and security scanning alerts | No | Yes | None | 5 | 3 Days (Will need to figure out API endpoints for Dependabot and Scanning) |
 | 6.3 | Compliance | N/A | No | None |
 
 All other policy clauses are not relevant to the project and require **no** implementation.
