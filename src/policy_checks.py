@@ -33,7 +33,24 @@ def check_inactive(repo_api_url: str, gh: api_controller) -> bool | str:
 
 # Repos with no branch protection rules
 def check_branch_protection(repo_api_url: str, gh: api_controller) -> bool | str:
-    print("e")
+    response = gh.get(repo_api_url, {}, False)
+
+    if response.status_code == 200:
+        json = response.json()
+
+        branches_protected = True
+        unprotected_branches = []
+
+        for branch in json:
+            if branch["protected"] == False:
+                branches_protected = False
+
+                unprotected_branches.append(branch["name"])
+
+        return branches_protected
+
+    else:
+        return f"Error {response.status_code}: {response.json()["message"]}"
 
 # Repos with unsigned commits
 def check_unsigned_commits(repo_api_url: str, gh: api_controller) -> bool | str:
