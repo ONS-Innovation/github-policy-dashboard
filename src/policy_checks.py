@@ -72,8 +72,37 @@ def check_signed_commits(repo_api_url: str, gh: api_controller) -> bool | str:
 
 # Repos without README.md, Liscense file (public only), 
 # PIRR.md (private or internal) and .gitignore
-def check_missing_files(repo_api_url: str, gh: api_controller) -> bool | str:
-    print("e")
+
+def check_readme_exists(repo_api_url: str, gh: api_controller) -> bool | str:
+    # Uppercase README.md
+    readme_exists = True if gh.get(repo_api_url.replace("{+path}", "README.md"), {}, False).status_code == 200 else False
+
+    # Lowercase readme.md
+    readme_exists = (True if gh.get(repo_api_url.replace("{+path}", "readme.md"), {}, False).status_code == 200 else False) or readme_exists
+
+    return readme_exists
+
+# Repos without License file
+def check_license_exists(repo_api_url: str, gh: api_controller) -> bool | str:
+    # LICENSE.md
+    license_exists = True if gh.get(repo_api_url.replace("{+path}", "LICENSE.md"), {}, False).status_code == 200 else False
+
+    # LICENSE without .md
+    license_exists = (True if gh.get(repo_api_url.replace("{+path}", "LICENSE"), {}, False).status_code == 200 else False) or license_exists
+
+    return license_exists
+
+# Repos without PIRR.md
+def check_pirr_exists(repo_api_url: str, gh: api_controller) -> bool | str:
+    pirr_exists = True if gh.get(repo_api_url.replace("{+path}", "PIRR.md"), {}, False).status_code == 200 else False
+
+    return pirr_exists
+
+# Repos without .gitignore
+def check_gitignore_exists(repo_api_url: str, gh: api_controller) -> bool | str:
+    gitignore_exists = True if gh.get(repo_api_url.replace("{+path}", ".gitignore"), {}, False).status_code == 200 else False
+
+    return gitignore_exists
 
 # Any external PR's
 def check_external_pr(repo_api_url: str, gh: api_controller) -> bool | str:
