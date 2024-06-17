@@ -53,8 +53,22 @@ def check_branch_protection(repo_api_url: str, gh: api_controller) -> bool | str
         return f"Error {response.status_code}: {response.json()["message"]}"
 
 # Repos with unsigned commits
-def check_unsigned_commits(repo_api_url: str, gh: api_controller) -> bool | str:
-    print("e")
+def check_signed_commits(repo_api_url: str, gh: api_controller) -> bool | str:
+    response = gh.get(repo_api_url, {"per_page": 15}, False)
+
+    if response.status_code == 200:
+        json = response.json()
+
+        commits_signed = True
+
+        for commit in json:
+            if commit["commit"]["verification"]["verified"] == False:
+                commits_signed = False
+
+        return commits_signed
+
+    else:
+        return f"Error {response.status_code}: {response.json()["message"]}"
 
 # Repos without README.md, Liscense file (public only), 
 # PIRR.md (private or internal) and .gitignore
