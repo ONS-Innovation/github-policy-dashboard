@@ -3,6 +3,8 @@ from dateutil.relativedelta import relativedelta
 
 from api_interface import api_controller
 
+from pprint import pprint
+
 # Users with no ONS email in their account
 
 
@@ -105,9 +107,41 @@ def check_gitignore_exists(repo_api_url: str, gh: api_controller) -> bool | str:
     return gitignore_exists
 
 # Any external PR's
-def check_external_pr(repo_api_url: str, gh: api_controller) -> bool | str:
-    print("e")
+def check_external_pr(repo_api_url: str, repo_full_name: str, gh: api_controller) -> bool | str:
+    pulls_response = gh.get(repo_api_url, {}, False)
+
+    org = repo_full_name.split("/")[0]
+
+    org_members = []
+
+    members_response = gh.get(f"/orgs/{org}/members", {"per_page": 100})
+
+    if members_response.status_code == 200:
+
+        try:
+            last_page = int(members_response.links["last"]["url"].split("=")[-1])
+        except KeyError:
+            last_page = 1
+
+        for i in range(0, last_page):
+            members = gh.get(f"/orgs/{org}/members", {"per_page": 100, "page": i}).json()
+        
+            for member in members:
+                org_members.append(member["login"])
+
+        for pr in pulls_response.json():
+            author = pr["user"]["login"]
+
+            if author not in org_members:
+                return True
+            
+        return False
+
 
 # Any repos breaking naming conventions (uppercase, specials, etc.)
-def check_naming(repo_api_url: str, gh: api_controller) -> bool | str:
-    print("e")
+def check_breaks_naming(repo_name: str) -> bool | str:
+    for character in repo_name:
+        if not(character.isnumeric() or character.isalpha() or character in ["_", "-"]) or character.isupper():
+            return True
+        
+    return False
