@@ -3,7 +3,7 @@ from dateutil.relativedelta import relativedelta
 
 from api_interface import api_controller
 
-from pprint import pprint
+# User Checks
 
 # Users with no ONS email in their account
 
@@ -11,103 +11,139 @@ from pprint import pprint
 # Check if org memebers should be there
 
 
-# SLOs (probably separate script)
+# SLO Scripts
 
+# 
+
+
+
+# Repository Checks
 
 # Repos not updated for > 1 yr
-def check_inactive(repo_api_url: str, gh: api_controller) -> bool | str:
-    response = gh.get(repo_api_url, {}, False)
+def check_inactive(repo: dict) -> bool:
+    """
+    Checks if the repository was pushed to more than a year ago.
+    If this is True, return True
 
-    if response.status_code == 200:
-        json = response.json()
+    Args:
+        repo (dict): The JSON response for the repository
+    Returns:
+        bool (True if check breaks policy)
+    """
 
-        last_update = datetime.datetime.strptime(json["pushed_at"], "%Y-%m-%dT%H:%M:%SZ")
+    last_update = datetime.datetime.strptime(repo["pushed_at"], "%Y-%m-%dT%H:%M:%SZ")
 
-        comparison_date = datetime.datetime.today() - relativedelta(years=1)
+    comparison_date = datetime.datetime.today() - relativedelta(years=1)
 
-        if last_update < comparison_date:
-            return True
-        else:
-            return False
-
+    if last_update < comparison_date:
+        return True
     else:
-        return f"Error {response.status_code}: {response.json()["message"]}"
+        return False
 
 # Repos with no branch protection rules
 def check_branch_protection(repo_api_url: str, gh: api_controller) -> bool | str:
-    response = gh.get(repo_api_url, {}, False)
+    """
+    Checks if all the branches in a repository are protected.
+    If any branches are unprotected, return True
 
-    if response.status_code == 200:
-        json = response.json()
+    Args:
+        repo_api_url (str): The API endpoint to get the repository's branches
+        gh (api_controller): An instance of the api_controller class to make calls to the GitHub API
+    Returns:
+        bool (True if check breaks policy)
+        or
+        str (an error has occured when accessing the API)
+    """
 
-        branches_protected = True
+    branches_response = gh.get(repo_api_url, {}, False)
+
+    if branches_response.status_code == 200:
+        json = branches_response.json()
+
+        branches_unprotected = False
         unprotected_branches = []
 
         for branch in json:
             if branch["protected"] == False:
-                branches_protected = False
+                branches_unprotected = True
 
                 unprotected_branches.append(branch["name"])
 
-        return branches_protected
+        return branches_unprotected
 
     else:
-        return f"Error {response.status_code}: {response.json()["message"]}"
+        return f"Error {branches_response.status_code}: {branches_response.json()["message"]}"
 
 # Repos with unsigned commits
 def check_signed_commits(repo_api_url: str, gh: api_controller) -> bool | str:
-    response = gh.get(repo_api_url, {"per_page": 15}, False)
+    """
+    Checks if the last 15 commits are signed.
+    If any commit is not signed, return True
 
-    if response.status_code == 200:
-        json = response.json()
+    Args:
+        repo_api_url (str): The API endpoint to get the repository's commits
+        gh (api_controller): An instance of the api_controller class to make calls to the GitHub API
+    Returns:
+        bool (True if check breaks policy)
+        or
+        str (an error has occured when accessing the API)
+    """
 
-        commits_signed = True
+    commits_response = gh.get(repo_api_url, {"per_page": 15}, False)
 
-        for commit in json:
+    if commits_response.status_code == 200:
+        commits = commits_response.json()
+
+        unsigned_commits = False
+
+        for commit in commits:
             if commit["commit"]["verification"]["verified"] == False:
-                commits_signed = False
+                unsigned_commits = True
 
-        return commits_signed
+        return unsigned_commits
 
     else:
-        return f"Error {response.status_code}: {response.json()["message"]}"
+        return f"Error {commits_response.status_code}: {commits_response.json()["message"]}"
 
 # Repos without README.md, Liscense file (public only), 
 # PIRR.md (private or internal) and .gitignore
 
-def check_readme_exists(repo_api_url: str, gh: api_controller) -> bool | str:
-    # Uppercase README.md
-    readme_exists = True if gh.get(repo_api_url.replace("{+path}", "README.md"), {}, False).status_code == 200 else False
+def check_file_exists(repo_api_url: str, gh: api_controller, files: list[str]):
+    """
+    Checks if a given filename exists in the repository.
+    Returns True if file is missing
 
-    # Lowercase readme.md
-    readme_exists = (True if gh.get(repo_api_url.replace("{+path}", "readme.md"), {}, False).status_code == 200 else False) or readme_exists
+    Args:
+        repo_api_url (str): The API endpoint to get the repository's contents
+        gh (api_controller): An instance of the api_controller class to make calls to the GitHub API
+        files (list[str]): The list of filenames to look for
+    Returns:
+        bool (True if check breaks policy)
+    """
 
-    return readme_exists
+    for file in files:
+        if gh.get(repo_api_url.replace("{+path}", file), {}, False).status_code == 200:
+            return False
+        
+    return True
 
-# Repos without License file
-def check_license_exists(repo_api_url: str, gh: api_controller) -> bool | str:
-    # LICENSE.md
-    license_exists = True if gh.get(repo_api_url.replace("{+path}", "LICENSE.md"), {}, False).status_code == 200 else False
-
-    # LICENSE without .md
-    license_exists = (True if gh.get(repo_api_url.replace("{+path}", "LICENSE"), {}, False).status_code == 200 else False) or license_exists
-
-    return license_exists
-
-# Repos without PIRR.md
-def check_pirr_exists(repo_api_url: str, gh: api_controller) -> bool | str:
-    pirr_exists = True if gh.get(repo_api_url.replace("{+path}", "PIRR.md"), {}, False).status_code == 200 else False
-
-    return pirr_exists
-
-# Repos without .gitignore
-def check_gitignore_exists(repo_api_url: str, gh: api_controller) -> bool | str:
-    gitignore_exists = True if gh.get(repo_api_url.replace("{+path}", ".gitignore"), {}, False).status_code == 200 else False
-
-    return gitignore_exists
 
 # Any external PR's
 def check_external_pr(repo_api_url: str, repo_full_name: str, gh: api_controller) -> bool | str:
+    """
+    Checks if there are any pull requests in the repository from non-members of the organisation.
+    Returns True if there is an external pull request
+
+    Args:
+        repo_api_url (str): The API endpoint to get the repository's pull requests
+        repo_full_name (str): The fullname of the repository from the GitHub API (format: <owner>/<repo>)
+        gh (api_controller): An instance of the api_controller class to make calls to the GitHub API
+    Returns:
+        bool (True if check breaks policy)
+        or
+        str (an error has occured when accessing the API)
+    """
+
     pulls_response = gh.get(repo_api_url, {}, False)
 
     org = repo_full_name.split("/")[0]
@@ -136,10 +172,21 @@ def check_external_pr(repo_api_url: str, repo_full_name: str, gh: api_controller
                 return True
             
         return False
-
+    
+    else:
+        return f"Error {members_response.status_code}: {members_response.json()["message"]}"
 
 # Any repos breaking naming conventions (uppercase, specials, etc.)
 def check_breaks_naming(repo_name: str) -> bool | str:
+    """
+    Checks if the given repository name breaks naming convention.
+    Returns True if breaks convention
+
+    Args:
+        repo_name (str): The name of the repository
+    Returns:
+        bool (True if check breaks policy)
+    """
     for character in repo_name:
         if not(character.isnumeric() or character.isalpha() or character in ["_", "-"]) or character.isupper():
             return True
