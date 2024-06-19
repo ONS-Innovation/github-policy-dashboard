@@ -11,9 +11,55 @@ from api_interface import api_controller
 # Check if org memebers should be there
 
 
+
 # SLO Scripts
 
-# 
+# Secret Scanning
+# Alerts open > 5 days
+def get_secret_scanning_alerts(gh: api_controller, org: str) -> list[dict] | str:
+    secret_alerts_response = gh.get(f"https://api.github.com/orgs/{org}/secret-scanning/alerts", {"state": "open"}, False)
+
+    if secret_alerts_response.status_code == 200:
+        secret_alerts = secret_alerts_response.json()
+
+        comparison_date = datetime.datetime.today() - datetime.timedelta(days=5)
+
+        pop_count = 0
+
+        # Remove all alerts openned < 5 days ago
+        for i in range(0, len(secret_alerts)):
+            date_openned = datetime.datetime.strptime(secret_alerts[i]["created_at"], "%Y-%m-%dT%H:%M:%SZ")
+
+            if date_openned > comparison_date:
+                secret_alerts.pop(i)
+                pop_count += 1
+
+        formatted_alerts = []
+
+        for alert in secret_alerts:
+            formatted_alert = {
+                "repo": alert["repository"]["name"],
+                "secret": f"{alert["secret_type_display_name"] - alert["secret"]}",
+                "link": alert["html_url"]
+            }
+
+            formatted_alerts.append(formatted_alert)
+
+        return formatted_alerts
+    else:
+        return f"Error {secret_alerts_response.status_code}: {secret_alerts_response.json()["message"]}"
+
+# Dependabot
+# Critical alerts open > 5 days
+
+
+# High alerts oepn > 15 days
+
+
+# Medium alerts open > 60 days
+
+
+# Low alerts open > 90 days
 
 
 
