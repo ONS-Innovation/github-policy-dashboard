@@ -39,7 +39,7 @@ def get_secret_scanning_alerts(gh: api_controller, org: str) -> list[dict] | str
         for alert in secret_alerts:
             formatted_alert = {
                 "repo": alert["repository"]["name"],
-                "secret": f"{alert["secret_type_display_name"] - alert["secret"]}",
+                "secret": f"{alert["secret_type_display_name"]} - {alert["secret"]}",
                 "link": alert["html_url"]
             }
 
