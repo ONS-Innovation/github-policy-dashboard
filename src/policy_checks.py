@@ -16,13 +16,25 @@ from api_interface import api_controller
 
 # Secret Scanning
 # Alerts open > 5 days
-def get_secret_scanning_alerts(gh: api_controller, org: str) -> list[dict] | str:
-    secret_alerts_response = gh.get(f"https://api.github.com/orgs/{org}/secret-scanning/alerts", {"state": "open"}, False)
+def get_secret_scanning_alerts(gh: api_controller, org: str, days_open: int) -> list[dict] | str:
+    """ 
+    Gets all open secret scanning alerts that have been open for more than a certain number of days.
+
+    Args:
+        gh (api_controller): An instance of the api_controller class to make calls to the GitHub API
+        org (str): The name of the organisation
+        days_open (int): The number of days the alert has been open for
+    Returns:
+        list[dict] (A list of formatted alerts)
+        or
+        str (an error has occured when accessing the API)
+    """
+    secret_alerts_response = gh.get(f"https://api.github.com/orgs/{org}/secret-scanning/alerts", {"state": "open", "per_page":100}, False)
 
     if secret_alerts_response.status_code == 200:
         secret_alerts = secret_alerts_response.json()
 
-        comparison_date = datetime.datetime.today() - datetime.timedelta(days=5)
+        comparison_date = datetime.datetime.today() - datetime.timedelta(days=days_open)
 
         pop_count = 0
 
@@ -39,6 +51,7 @@ def get_secret_scanning_alerts(gh: api_controller, org: str) -> list[dict] | str
         for alert in secret_alerts:
             formatted_alert = {
                 "repo": alert["repository"]["name"],
+                "type": gh.get(alert["repository"]["url"], {}, False).json()["visibility"],
                 "secret": f"{alert["secret_type_display_name"]} - {alert["secret"]}",
                 "link": alert["html_url"]
             }
@@ -50,18 +63,77 @@ def get_secret_scanning_alerts(gh: api_controller, org: str) -> list[dict] | str
         return f"Error {secret_alerts_response.status_code}: {secret_alerts_response.json()["message"]}"
 
 # Dependabot
-# Critical alerts open > 5 days
+def get_dependabot_alerts_by_severity(gh: api_controller, org: str, severity: str, days_open: int) -> list[dict] | str:
+    """
+    Gets all open dependabot alerts of a certain severity that have been open for more than a certain number of days.
 
+    Args:
+        gh (api_controller): An instance of the api_controller class to make calls to the GitHub API
+        org (str): The name of the organisation
+        severity (str): The severity of the alerts to get
+        days_open (int): The number of days the alert has been open for
+    Returns:
+        list[dict] (A list of formatted alerts)
+        or
+        str (an error has occured when accessing the API)
+    """
+    formatted_alerts = []
+    
+    alerts_response = gh.get(f"https://api.github.com/orgs/{org}/dependabot/alerts", {"state": "open", "severity": severity, "per_page": 100}, False)
 
-# High alerts oepn > 15 days
+    if alerts_response.status_code == 200:
+        # Get Number of Pages 
+        try:
+            last_page = int(alerts_response.links["last"]["url"].split("=")[-1])
+        except KeyError:
+            # If Key Error, Last doesn't exist therefore 1 page
+            last_page = 1
 
+        for i in range(0, last_page):
 
-# Medium alerts open > 60 days
+            alerts_response = gh.get(f"https://api.github.com/orgs/{org}/dependabot/alerts", {"state": "open", "severity": severity, "per_page": 100, "page": i+1}, False)
 
+            if alerts_response.status_code == 200:
+                alerts = alerts_response.json()
 
-# Low alerts open > 90 days
+                comparison_date = datetime.datetime.today() - datetime.timedelta(days=days_open)
 
+                for alert in alerts:
+                    date_openned = datetime.datetime.strptime(alert["created_at"], "%Y-%m-%dT%H:%M:%SZ")
 
+                    if date_openned < comparison_date:
+                        formatted_alert = {
+                            "repo": alert["repository"]["name"],
+                            "type": gh.get(alert["repository"]["url"], {}, False).json()["visibility"],
+                            "dependency": alert["dependency"]["package"]["name"],
+                            "advisory": alert["security_advisory"]["summary"],
+                            "link": alert["html_url"]
+                        }
+
+                        formatted_alerts.append(formatted_alert)
+
+        return formatted_alerts
+    else:
+        return f"Error {alerts_response.status_code}: {alerts_response.json()["message"]}"
+
+def get_all_dependabot_alerts(gh: api_controller, org: str) -> list[dict] | str:
+    # Critical alerts open > 5 days
+    critical_alerts = get_dependabot_alerts_by_severity(gh, org, "critical", 5)
+
+    # High alerts oepn > 15 days
+    high_alerts = get_dependabot_alerts_by_severity(gh, org, "high", 15)
+
+    # Medium alerts open > 60 days
+    medium_alerts = get_dependabot_alerts_by_severity(gh, org, "medium", 60)
+
+    # Low alerts open > 90 days
+    low_alerts = get_dependabot_alerts_by_severity(gh, org, "low", 90)
+
+    if type(critical_alerts) == str or type(high_alerts) == str or type(medium_alerts) == str or type(low_alerts) == str:
+        return "Error: An error has occured when accessing the API"
+    else:
+        alerts = critical_alerts + high_alerts + medium_alerts + low_alerts
+        return alerts
 
 # Repository Checks
 
