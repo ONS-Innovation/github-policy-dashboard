@@ -1,3 +1,7 @@
 venv
 github-audit-dashboard.pem
 __pycache__
+
+repositories.json
+secret_scanning.json
+dependabot.json

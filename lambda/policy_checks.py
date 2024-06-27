@@ -15,7 +15,6 @@ from api_interface import api_controller
 # SLO Scripts
 
 # Secret Scanning
-# Alerts open > 5 days
 def get_secret_scanning_alerts(gh: api_controller, org: str, days_open: int) -> list[dict] | str:
     """ 
     Gets all open secret scanning alerts that have been open for more than a certain number of days.
@@ -117,10 +116,25 @@ def get_dependabot_alerts_by_severity(gh: api_controller, org: str, severity: st
         return f"Error {alerts_response.status_code}: {alerts_response.json()["message"]}"
 
 def get_all_dependabot_alerts(gh: api_controller, org: str) -> list[dict] | str:
+    """
+    Gets all open dependabot alerts using the following criteria:
+        - Critical alerts open > 5 days
+        - High alerts open > 15 days
+        - Medium alerts open > 60 days
+        - Low alerts open > 90 days
+
+    Args:
+        gh (api_controller): An instance of the api_controller class to make calls to the GitHub API
+        org (str): The name of the organisation
+    Returns:
+        list[dict] (A list of formatted alerts)
+        or
+        str (an error has occured when accessing the API)
+    """
     # Critical alerts open > 5 days
     critical_alerts = get_dependabot_alerts_by_severity(gh, org, "critical", 5)
 
-    # High alerts oepn > 15 days
+    # High alerts open > 15 days
     high_alerts = get_dependabot_alerts_by_severity(gh, org, "high", 15)
 
     # Medium alerts open > 60 days
@@ -310,3 +324,68 @@ def check_breaks_naming(repo_name: str) -> bool | str:
             return True
         
     return False
+
+
+# Uses the above checks to get the repository data
+def get_repository_data(gh: api_controller, org: str) -> list[dict] | str:
+    """
+    Gets all the repositories in the organisation and runs the policy checks on them.
+
+    Args:
+        gh (api_controller): An instance of the api_controller class to make calls to the GitHub API
+        org (str): The name of the organisation
+    Returns:
+        list[dict] (A list of formatted repository data)
+        or
+        str (an error has occured when accessing the API)
+    """
+    repo_list = []
+
+    repos_response = gh.get(f"/orgs/{org}/repos", {"per_page": 100})
+
+    if repos_response.status_code == 200:
+        try:
+            last_page = int(repos_response.links["last"]["url"].split("=")[-1])
+        except KeyError:
+            # If Key Error, Last doesn't exist therefore 1 page
+            last_page = 1
+
+        for i in range(0, last_page):
+            repos_response = gh.get(f"/orgs/{org}/repos", {"per_page": 100, "page": i+1})
+
+            if repos_response.status_code == 200:
+                repos = repos_response.json()
+
+                for repo in repos:
+                    repo_info = {
+                        "name": repo["name"],
+                        "type": repo["visibility"],
+                        "url": repo["html_url"],
+                        "checklist": {
+                            "inactive": check_inactive(repo),
+                            "branch_unprotected": check_branch_protection(repo["branches_url"].replace("{/branch}", ""), gh),
+                            "unsigned_commits": check_signed_commits(repo["commits_url"].replace("{/sha}", ""), gh),
+                            "readme_exists": check_file_exists(repo["contents_url"], gh, ["README.md", "readme.md"]),
+                            "license_exists": check_file_exists(repo["contents_url"], gh, ["LICENSE.md", "LICENSE"]),
+                            "pirr_exists": check_file_exists(repo["contents_url"], gh, ["PIRR.md"]),
+                            "gitignore_exists": check_file_exists(repo["contents_url"], gh, [".gitignore"]),
+                            "external_pr": check_external_pr(repo["pulls_url"].replace("{/number}", ""), repo["full_name"], gh),
+                            "break_naming": check_breaks_naming(repo["name"])
+                        }
+                    }
+
+                    # If repo type is public, then PIRR check does not apply, so set to False
+                    # If repo type is private/internal, then License check does not apply, so set to False
+                    if repo_info["type"] == "public":
+                        repo_info["checklist"]["pirr_exists"] = False
+                    else:
+                        repo_info["checklist"]["license_exists"] = False
+
+                    repo_list.append(repo_info)
+
+            else:
+                return f"Error {repos_response.status_code}: {repos_response.json()["message"]}"
+
+        return repo_list
+    else:
+        return f"Error {repos_response.status_code}: {repos_response.json()["message"]}"
