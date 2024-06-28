@@ -233,7 +233,9 @@ def check_signed_commits(repo_api_url: str, gh: api_controller) -> bool | str:
                 unsigned_commits = True
 
         return unsigned_commits
-
+    elif commits_response.status_code == 409:
+        # If error 409, then the repository does not have any commits.
+        return False
     else:
         return f"Error {commits_response.status_code}: {commits_response.json()["message"]}"
 
@@ -363,23 +365,23 @@ def get_repository_data(gh: api_controller, org: str) -> list[dict] | str:
                         "url": repo["html_url"],
                         "checklist": {
                             "inactive": check_inactive(repo),
-                            "branch_unprotected": check_branch_protection(repo["branches_url"].replace("{/branch}", ""), gh),
+                            "unprotected_branches": check_branch_protection(repo["branches_url"].replace("{/branch}", ""), gh),
                             "unsigned_commits": check_signed_commits(repo["commits_url"].replace("{/sha}", ""), gh),
-                            "readme_exists": check_file_exists(repo["contents_url"], gh, ["README.md", "readme.md"]),
-                            "license_exists": check_file_exists(repo["contents_url"], gh, ["LICENSE.md", "LICENSE"]),
-                            "pirr_exists": check_file_exists(repo["contents_url"], gh, ["PIRR.md"]),
-                            "gitignore_exists": check_file_exists(repo["contents_url"], gh, [".gitignore"]),
+                            "readme_missing": check_file_exists(repo["contents_url"], gh, ["README.md", "readme.md"]),
+                            "license_missing": check_file_exists(repo["contents_url"], gh, ["LICENSE.md", "LICENSE"]),
+                            "pirr_missing": check_file_exists(repo["contents_url"], gh, ["PIRR.md"]),
+                            "gitignore_missing": check_file_exists(repo["contents_url"], gh, [".gitignore"]),
                             "external_pr": check_external_pr(repo["pulls_url"].replace("{/number}", ""), repo["full_name"], gh),
-                            "break_naming": check_breaks_naming(repo["name"])
+                            "breaks_naming_convention": check_breaks_naming(repo["name"])
                         }
                     }
 
                     # If repo type is public, then PIRR check does not apply, so set to False
                     # If repo type is private/internal, then License check does not apply, so set to False
                     if repo_info["type"] == "public":
-                        repo_info["checklist"]["pirr_exists"] = False
+                        repo_info["checklist"]["pirr_missing"] = False
                     else:
-                        repo_info["checklist"]["license_exists"] = False
+                        repo_info["checklist"]["license_missing"] = False
 
                     repo_list.append(repo_info)
 
