@@ -55,68 +55,102 @@ with repository_tab:
 
     df_repositories.columns = ["repository", "repository_type", "url"] + rules
 
-    col1, col2 = st.columns(2)
+    if "selected_rules" not in st.session_state:
+        st.session_state["selected_rules"] = rules
 
-    selected_rules = rules
+    # Preset Buttons
+    
+    col1, col2 = st.columns(2)
 
     with col1:
         if st.button("Security Preset", use_container_width=True):
-            selected_rules = rules[:3] + [rules[6]] + [rules[8]]
+            st.session_state["selected_rules"] = rules[:3] + [rules[6]] + [rules[8]]
 
     with col2:
         if st.button("Policy Preset", use_container_width=True):
-            selected_rules = rules[0:6] + [rules[8]]
+            st.session_state["selected_rules"] = rules[0:6] + [rules[8]]
 
-    selected_rules = st.multiselect("Select rules", rules, selected_rules)
+    selected_rules = st.multiselect("Select rules", rules, st.session_state["selected_rules"])
 
-    rules_to_exclude = []
+    if len(selected_rules) != 0:
+        rules_to_exclude = []
 
-    for rule in rules:
-        if rule not in selected_rules:
-            rules_to_exclude.append(rule)
+        for rule in rules:
+            if rule not in selected_rules:
+                rules_to_exclude.append(rule)
 
-    df_repositories = df_repositories.drop(columns=rules_to_exclude)
+        df_repositories = df_repositories.drop(columns=rules_to_exclude)
 
-    df_repositories["is_compliant"] = df_repositories.any(axis="columns", bool_only=True)
-    df_repositories["is_compliant"] = df_repositories["is_compliant"].apply(lambda x: not x)
+        df_repositories["is_compliant"] = df_repositories.any(axis="columns", bool_only=True)
+        df_repositories["is_compliant"] = df_repositories["is_compliant"].apply(lambda x: not x)
 
-    df_repositories["rules_broken"] = df_repositories[selected_rules].sum(axis="columns")
+        df_repositories["rules_broken"] = df_repositories[selected_rules].sum(axis="columns")
 
-    df_repositories = df_repositories.sort_values(by=["rules_broken", "repository"], ascending=[False, True])
+        df_repositories = df_repositories.sort_values(by=["rules_broken", "repository"], ascending=[False, True])
 
-    st.subheader("Repository Compliance")
+        st.subheader("Repository Compliance")
 
-    col1, col2 = st.columns(2)
+        st.write("Checking for the following rules:")
 
-    df_compliance = df_repositories["is_compliant"].value_counts().reset_index()
+        col1, col2 = st.columns(2)
 
-    df_compliance["is_compliant"] = df_compliance["is_compliant"].apply(lambda x: "Compliant" if x else "Non-Compliant")
+        for i in range(0, len(selected_rules)):
+            if i % 2 == 0:
+                with col1:
+                    st.write(f"- {selected_rules[i].replace('_', ' ')}")
+            else:
+                with col2:
+                    st.write(f"- {selected_rules[i].replace('_', ' ')}")
 
-    df_compliance.columns = ["Compliance", "Number of Repositories"]
+        st.divider()
 
-    with col1:
-        fig = px.pie(df_compliance, values="Number of Repositories", names="Compliance")
+        col1, col2 = st.columns(2)
 
-        st.plotly_chart(fig)
+        df_compliance = df_repositories["is_compliant"].value_counts().reset_index()
 
-    with col2:
-        st.metric("Compliant Repositories", df_compliance.loc[df_compliance["Compliance"] == "Compliant", "Number of Repositories"])
-        st.metric("Non-Compliant Repositories", df_compliance.loc[df_compliance["Compliance"] == "Non-Compliant", "Number of Repositories"])
-        st.metric("Average Rules Broken", int(df_repositories["rules_broken"].mean().round(0)))
+        df_compliance["is_compliant"] = df_compliance["is_compliant"].apply(lambda x: "Compliant" if x else "Non-Compliant")
 
-        rule_frequency = df_repositories[selected_rules].sum()
-        st.metric("Most Common Rule Broken", rule_frequency.idxmax().replace("_", " "))
+        df_compliance.columns = ["Compliance", "Number of Repositories"]
 
-    st.subheader("Non-Compliant Repositories")
+        with col1:
+            fig = px.pie(df_compliance, values="Number of Repositories", names="Compliance")
 
-    selected_repo = st.dataframe(
-        df_repositories[["repository", "repository_type", "rules_broken"]].loc[df_repositories["is_compliant"] == 0],
-        on_select="rerun",
-        selection_mode=["single-row"],
-        use_container_width=True,
-    )
+            st.plotly_chart(fig)
 
-    if len(selected_repo["selection"]["rows"]) > 0:
-        selected_repo = selected_repo["selection"]["rows"][0]
+        with col2:
+            st.metric("Compliant Repositories", df_compliance.loc[df_compliance["Compliance"] == "Compliant", "Number of Repositories"])
+            st.metric("Non-Compliant Repositories", df_compliance.loc[df_compliance["Compliance"] == "Non-Compliant", "Number of Repositories"])
+            st.metric("Average Rules Broken", int(df_repositories["rules_broken"].mean().round(0)))
 
-        st.write(df_repositories.iloc[selected_repo])
+            rule_frequency = df_repositories[selected_rules].sum()
+            st.metric("Most Common Rule Broken", rule_frequency.idxmax().replace("_", " "))
+
+        st.subheader("Non-Compliant Repositories")
+
+        selected_repo = st.dataframe(
+            df_repositories[["repository", "repository_type", "rules_broken"]].loc[df_repositories["is_compliant"] == 0],
+            on_select="rerun",
+            selection_mode=["single-row"],
+            use_container_width=True,
+            hide_index=True
+        )
+
+        if len(selected_repo["selection"]["rows"]) > 0:
+            selected_repo = selected_repo["selection"]["rows"][0]
+
+            selected_repo = df_repositories.iloc[selected_repo]
+
+            failed_checks = selected_repo[3:-2].loc[selected_repo[3:-2] == 1]
+
+            col1, col2 = st.columns([0.8, 0.2])
+
+            col1.subheader(f"{selected_repo["repository"]} ({selected_repo["repository_type"].capitalize()})")
+            col2.write(f"[Go to Repository]({selected_repo['url']})")
+
+            st.subheader("Rules Broken:")      
+
+            for check in failed_checks.index:
+                st.write(f"- {check.replace('_', ' ')}")  
+
+    else:
+        st.write("Please select at least one rule.")
