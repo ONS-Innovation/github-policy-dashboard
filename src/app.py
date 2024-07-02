@@ -37,7 +37,7 @@ def get_table_from_s3(s3, bucket_name: str, object_name: str, filename: str) -> 
 
     return pd.json_normalize(file_json)
 
-@st.cache_data
+# @st.cache_data
 def load_data():
     """
         Loads the data from the S3 bucket and returns it as a Pandas DataFrame.
@@ -52,6 +52,11 @@ def load_data():
     df_repositories = get_table_from_s3(s3, bucket_name, "repositories.json", "repositories.json")
     df_secret_scanning = get_table_from_s3(s3, bucket_name, "secret_scanning.json", "secret_scanning.json")
     df_dependabot = get_table_from_s3(s3, bucket_name, "dependabot.json", "dependabot.json")
+
+    # with open("secret_scanning.json", "r") as f:
+    #     file_json = json.load(f)
+
+    # df_secret_scanning = pd.json_normalize(file_json)
 
     return df_repositories, df_secret_scanning, df_dependabot
 
@@ -98,7 +103,7 @@ with repository_tab:
 
     selected_rules = st.multiselect("Select rules", rules, st.session_state["selected_rules"])
 
-    repository_type = st.selectbox("Repository Type", ["all", "public", "private", "internal"])
+    repository_type = st.selectbox("Repository Type", ["all", "public", "private", "internal"], key="repos_repo_type")
 
     # If any rules are selected, populate the rest of the dashboard
     if len(selected_rules) != 0:
@@ -211,4 +216,132 @@ with repository_tab:
 with slo_tab:
     st.header("SLO Analysis")
 
-    st.write("This section is under construction.")
+    st.subheader("Secret Scanning Alerts")
+    st.write("Alerts open for more than 5 days.")
+
+    df_secret_scanning.columns = ["Repository Name", "Type", "Secret", "Link"]
+
+    df_secret_scanning_grouped = df_secret_scanning.groupby(["Repository Name", "Type"]).count().reset_index()
+
+    df_secret_scanning_grouped.columns = ["Repository Name", "Type", "Number of Secrets", "Link"]
+
+    col1, col2 = st.columns([0.8, 0.2])
+
+    with col1:
+        selected_secret = st.dataframe(
+            df_secret_scanning_grouped[["Repository Name", "Type", "Number of Secrets"]],
+            use_container_width=True,
+            on_select="rerun",
+            selection_mode=["single-row"],
+            hide_index=True
+        )
+
+    with col2:
+        st.metric("Total Alerts", df_secret_scanning_grouped["Number of Secrets"].sum())
+
+    if len(selected_secret["selection"]["rows"]) > 0:
+        selected_secret = selected_secret["selection"]["rows"][0]
+
+        selected_secret = df_secret_scanning_grouped.iloc[selected_secret]
+
+        st.subheader(f"{selected_secret['Repository Name']} ({selected_secret['Type']})")
+
+        st.dataframe(
+            df_secret_scanning.loc[df_secret_scanning["Repository Name"] == selected_secret["Repository Name"]],
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "Link": st.column_config.LinkColumn(
+                    "Link",
+                    display_text="Go to Alert"
+                )
+            }
+        )  
+
+    st.divider()
+
+    st.subheader("Dependabot Alerts")
+    st.write("Alerts open for more than 5 days (Critical), 15 days (High), 60 days (Medium), 90 days (Low).")    
+
+    # Rename the columns of the DataFrame
+    df_dependabot.columns = ["Repository Name", "Type", "Dependency", "Advisory", "Severity", "Days Open", "Link"]
+
+    col1, col2 = st.columns([0.7, 0.3])
+
+    severity = col1.multiselect("Alert Severity", ["critical", "high", "medium", "low"], ["critical", "high", "medium", "low"])
+    repo_type = col2.selectbox("Repository Type", ["all", "public", "private", "internal"], key="dependabot_repo_type")
+    minimum_days = st.slider("Minimum Days Open", 0, df_dependabot["Days Open"].max(), 0)
+
+    if len(severity) > 0:
+        df_dependabot = df_dependabot.loc[df_dependabot["Severity"].isin(severity) & (df_dependabot["Days Open"] >= minimum_days)]
+
+        if repo_type != "all":
+            df_dependabot = df_dependabot.loc[df_dependabot["Type"] == repo_type]
+
+        # Map the severity to a weight for sorting
+        df_dependabot["Severity Weight"] = df_dependabot["Severity"].map({"critical": 4, "high": 3, "medium": 2, "low": 1})
+
+        # Group the DataFrame by the repository name and the type
+        df_dependabot_grouped = df_dependabot.groupby(["Repository Name", "Type"]).agg({"Dependency": "count", "Severity Weight": "max", "Days Open": "max"}).reset_index()
+        
+        # Create a new column to map the severity weight to a severity level for the grouped data
+        df_dependabot_grouped["Severity"] = df_dependabot_grouped["Severity Weight"].map({4: "Critical", 3: "High", 2: "Medium", 1: "Low"})
+
+        # Rename the columns of the grouped DataFrame
+        df_dependabot_grouped.columns = ["Repository Name", "Type", "Number of Alerts", "Severity Weight", "Days Open", "Severity"]
+
+        # Sort the grouped DataFrame by the severity weight and the days open
+        df_dependabot_grouped.sort_values(by=["Severity Weight", "Days Open"], ascending=[False, False], inplace=True)
+
+        col1, col2 = st.columns([0.7, 0.3])
+
+        with col1:
+            df_dependabot_severity_grouped = df_dependabot.groupby("Severity").count().reset_index()[["Severity", "Repository Name"]]
+            df_dependabot_severity_grouped.columns = ["Severity", "Number of Alerts"]
+
+            fig = px.pie(
+                df_dependabot_severity_grouped,
+                names="Severity",
+                values="Number of Alerts",
+                title="Number of Alerts by Severity"
+            )
+
+            st.plotly_chart(fig)
+
+
+        with col2:
+            st.metric("Total Alerts", df_dependabot_grouped["Number of Alerts"].sum())
+            st.metric("Average Days Open", int(df_dependabot_grouped["Days Open"].mean().round(0)))
+
+            st.metric("Number of Repositories", df_dependabot_grouped["Repository Name"].count())
+            st.metric("Avg. Alerts per Repository", int(df_dependabot_grouped["Number of Alerts"].mean().round(0)))
+
+        selected_repo = st.dataframe(
+            df_dependabot_grouped[["Repository Name", "Type", "Number of Alerts", "Severity", "Days Open"]],
+            use_container_width=True,
+            on_select="rerun",
+            selection_mode=["single-row"],
+            hide_index=True
+        )
+
+        if len(selected_repo["selection"]["rows"]) > 0:
+            selected_repo = selected_repo["selection"]["rows"][0]
+
+            selected_repo = df_dependabot_grouped.iloc[selected_repo]
+
+            st.subheader(f"{selected_repo['Repository Name']} ({selected_repo['Type']})")
+
+            st.dataframe(
+                # Get the alerts for the selected repository, sort by severity weight and days open and display the columns
+                df_dependabot.loc[df_dependabot["Repository Name"] == selected_repo["Repository Name"]].sort_values(by=["Severity Weight", "Days Open"], ascending=[False, False])[["Repository Name", "Dependency", "Advisory", "Severity", "Days Open", "Link"]],
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    "Link": st.column_config.LinkColumn(
+                        "Link",
+                        display_text="Go to Alert"
+                    )
+                }
+            )
+    else:
+        st.write("Please select at least one severity level.")

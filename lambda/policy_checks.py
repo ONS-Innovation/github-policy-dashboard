@@ -101,11 +101,15 @@ def get_dependabot_alerts_by_severity(gh: api_controller, org: str, severity: st
                     date_openned = datetime.datetime.strptime(alert["created_at"], "%Y-%m-%dT%H:%M:%SZ")
 
                     if date_openned < comparison_date:
+                        days_openned = datetime.datetime.today() - date_openned
+
                         formatted_alert = {
                             "repo": alert["repository"]["name"],
                             "type": gh.get(alert["repository"]["url"], {}, False).json()["visibility"],
                             "dependency": alert["dependency"]["package"]["name"],
                             "advisory": alert["security_advisory"]["summary"],
+                            "severity": alert["security_advisory"]["severity"],
+                            "days_open": days_openned.days,
                             "link": alert["html_url"]
                         }
 
