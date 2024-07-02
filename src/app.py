@@ -98,6 +98,8 @@ with repository_tab:
 
     selected_rules = st.multiselect("Select rules", rules, st.session_state["selected_rules"])
 
+    repository_type = st.selectbox("Repository Type", ["all", "public", "private", "internal"])
+
     # If any rules are selected, populate the rest of the dashboard
     if len(selected_rules) != 0:
         rules_to_exclude = []
@@ -108,6 +110,10 @@ with repository_tab:
 
         # Remove the columns for rules that aren't selected
         df_repositories = df_repositories.drop(columns=rules_to_exclude)
+
+        # Filter the DataFrame by the selected repository type
+        if repository_type != "all":
+            df_repositories = df_repositories.loc[df_repositories["repository_type"] == repository_type]
 
         # Create a new column to check if the repository is compliant or not
         # If any check is True, the repository is non-compliant
@@ -152,8 +158,18 @@ with repository_tab:
 
         # Display metrics for the compliance of the repositories
         with col2:
-            st.metric("Compliant Repositories", df_compliance.loc[df_compliance["Compliance"] == "Compliant", "Number of Repositories"])
-            st.metric("Non-Compliant Repositories", df_compliance.loc[df_compliance["Compliance"] == "Non-Compliant", "Number of Repositories"])
+            compliant_repositories = df_compliance.loc[df_compliance["Compliance"] == "Compliant", "Number of Repositories"]
+
+            if len(compliant_repositories) == 0:
+                compliant_repositories = 0
+
+            noncompliant_repositories = df_compliance.loc[df_compliance["Compliance"] == "Non-Compliant", "Number of Repositories"]
+            
+            if len(noncompliant_repositories) == 0:
+                noncompliant_repositories = 0
+
+            st.metric("Compliant Repositories", compliant_repositories)
+            st.metric("Non-Compliant Repositories", noncompliant_repositories)
             st.metric("Average Rules Broken", int(df_repositories["rules_broken"].mean().round(0)))
 
             rule_frequency = df_repositories[selected_rules].sum()
@@ -191,3 +207,8 @@ with repository_tab:
     # If no rules are selected, prompt the user to select at least one rule
     else:
         st.write("Please select at least one rule.")
+
+with slo_tab:
+    st.header("SLO Analysis")
+
+    st.write("This section is under construction.")
