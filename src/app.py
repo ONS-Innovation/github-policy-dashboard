@@ -14,6 +14,19 @@ from botocore.exceptions import ClientError
 # st.set_page_config(layout="wide")
 
 def get_table_from_s3(s3, bucket_name: str, object_name: str, filename: str) -> pd.DataFrame | str:
+    """
+        Gets a JSON file from an S3 bucket and returns it as a Pandas DataFrame.
+
+        Args:
+            s3: A boto3 S3 client.
+            bucket_name: The name of the S3 bucket.
+            object_name: The name of the object in the S3 bucket.
+            filename: The name of the file to save the object to.
+        Returns:
+            A Pandas DataFrame containing the data from the JSON file.
+            or
+            A string containing an error message.
+    """
     try:
         s3.download_file(bucket_name, object_name, filename)
     except ClientError as e:
@@ -26,6 +39,11 @@ def get_table_from_s3(s3, bucket_name: str, object_name: str, filename: str) -> 
 
 @st.cache_data
 def load_data():
+    """
+        Loads the data from the S3 bucket and returns it as a Pandas DataFrame.
+
+        This function is cached using Streamlit's @st.cache_data decorator.
+    """
     bucket_name = "sdp-sandbox-github-audit-dashboard"
 
     session = boto3.Session(profile_name="ons_sdp_sandbox")
@@ -43,18 +61,26 @@ df_repositories, df_secret_scanning, df_dependabot = load_data()
 # Title of the dashboard
 st.title("GitHub Audit Dashboard")
 
+# Tabs for Repository Analysis and SLO Analysis Sections
 repository_tab, slo_tab = st.tabs(["Repository Analysis", "SLO Analysis"])
+
+# Repository Analysis Section
 
 with repository_tab:
     st.header("Repository Analysis")
     
+    # Gets the rules from the repository DataFrame
     rules = df_repositories.columns.to_list()[3:]
 
+    # Cleans the rules to remove the "checklist." prefix
     for i in range(len(rules)):
         rules[i] = rules[i].replace("checklist.", "")
 
+    # Renames the columns of the DataFrame
     df_repositories.columns = ["repository", "repository_type", "url"] + rules
 
+    # Uses streamlit's session state to store the selected rules
+    # This is so that selected rules persist with other inputs (i.e the preset buttons)
     if "selected_rules" not in st.session_state:
         st.session_state["selected_rules"] = rules
 
@@ -72,6 +98,7 @@ with repository_tab:
 
     selected_rules = st.multiselect("Select rules", rules, st.session_state["selected_rules"])
 
+    # If any rules are selected, populate the rest of the dashboard
     if len(selected_rules) != 0:
         rules_to_exclude = []
 
@@ -79,44 +106,51 @@ with repository_tab:
             if rule not in selected_rules:
                 rules_to_exclude.append(rule)
 
+        # Remove the columns for rules that aren't selected
         df_repositories = df_repositories.drop(columns=rules_to_exclude)
 
+        # Create a new column to check if the repository is compliant or not
+        # If any check is True, the repository is non-compliant
         df_repositories["is_compliant"] = df_repositories.any(axis="columns", bool_only=True)
         df_repositories["is_compliant"] = df_repositories["is_compliant"].apply(lambda x: not x)
 
+        # Create a new column to count the number of rules broken
         df_repositories["rules_broken"] = df_repositories[selected_rules].sum(axis="columns")
-
+        
+        # Sort the DataFrame by the number of rules broken and the repository name
         df_repositories = df_repositories.sort_values(by=["rules_broken", "repository"], ascending=[False, True])
 
         st.subheader("Repository Compliance")
 
+        # Display the rules that are being checked
         st.write("Checking for the following rules:")
 
         col1, col2 = st.columns(2)
 
         for i in range(0, len(selected_rules)):
             if i % 2 == 0:
-                with col1:
-                    st.write(f"- {selected_rules[i].replace('_', ' ')}")
+                col1.write(f"- {selected_rules[i].replace('_', ' ')}")
             else:
-                with col2:
-                    st.write(f"- {selected_rules[i].replace('_', ' ')}")
+                col2.write(f"- {selected_rules[i].replace('_', ' ')}")
 
         st.divider()
 
         col1, col2 = st.columns(2)
 
+        # Create a dataframe summarising the compliance of the repositories
         df_compliance = df_repositories["is_compliant"].value_counts().reset_index()
 
         df_compliance["is_compliant"] = df_compliance["is_compliant"].apply(lambda x: "Compliant" if x else "Non-Compliant")
 
         df_compliance.columns = ["Compliance", "Number of Repositories"]
 
+        # Create a pie chart to show the compliance of the repositories
         with col1:
             fig = px.pie(df_compliance, values="Number of Repositories", names="Compliance")
 
             st.plotly_chart(fig)
 
+        # Display metrics for the compliance of the repositories
         with col2:
             st.metric("Compliant Repositories", df_compliance.loc[df_compliance["Compliance"] == "Compliant", "Number of Repositories"])
             st.metric("Non-Compliant Repositories", df_compliance.loc[df_compliance["Compliance"] == "Non-Compliant", "Number of Repositories"])
@@ -125,6 +159,7 @@ with repository_tab:
             rule_frequency = df_repositories[selected_rules].sum()
             st.metric("Most Common Rule Broken", rule_frequency.idxmax().replace("_", " "))
 
+        # Display the repositories that are non-compliant
         st.subheader("Non-Compliant Repositories")
 
         selected_repo = st.dataframe(
@@ -135,6 +170,7 @@ with repository_tab:
             hide_index=True
         )
 
+        # If a non-compliant repository is selected, display the rules that are broken
         if len(selected_repo["selection"]["rows"]) > 0:
             selected_repo = selected_repo["selection"]["rows"][0]
 
@@ -152,5 +188,6 @@ with repository_tab:
             for check in failed_checks.index:
                 st.write(f"- {check.replace('_', ' ')}")  
 
+    # If no rules are selected, prompt the user to select at least one rule
     else:
         st.write("Please select at least one rule.")
