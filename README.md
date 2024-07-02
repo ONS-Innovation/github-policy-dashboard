@@ -2,9 +2,10 @@
 A dashboard which uses organisation data from the GitHub API to monitor how well policy is adhered to in ONS.
 
 ## Prerequisites
-This project uses poetry for package management.
+This project uses poetry for package management and colima/docker for containerisation.
 
 [Instructions to install Poetry](https://python-poetry.org/docs/)
+[Instructions to install Colima](https://github.com/abiosoft/colima/blob/main/README.md)
 
 ## Setup - Run outside of Docker
 1. Navigate into the project's folder and create a virtual environment using `python3 -m venv venv`

@@ -13,6 +13,36 @@ This section requires colima/docker for containerisation.
 
 [Instructions to install Colima](https://github.com/abiosoft/colima/blob/main/README.md)
 
+## GitHub API
+### GitHub App
+A .pem file is used to allow the project to make authorised Github API requests through the means of Github App authentication.
+The project uses authentication as a Github App installation ([documentation](https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/authenticating-as-a-github-app-installation)).
+
+In order to get a .pem file, a Github App must be created an installed into the organisation of which the app will be interacting with.
+This app should have the following permissions:
+
+- Repository Permissions
+    - Pull Requests (Read)
+    - Contents (Read)
+    - Secret Scanning (Read)
+    - Dependabot (Read)
+
+- Organisation Permissions
+    - Members (Read)
+
+Once created and installed, you need to generate a Private Key for that Github App. This will download a .pem file to your pc.
+This file needs to be uploaded to AWS ([documentation](https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/managing-private-keys-for-github-apps)).
+
+If you do not have access to organisation settings, you need to request a .pem file for the app.
+
+### AWS
+The Lambda Script requires access to an associated Github App secret, this secret is created when the Github App is installed in the appropriate Github Organisation. The contents of the generated pem file is stored in the AWS Secret Manager and retrieved by this service to interact with Github securely.
+
+AWS Secret Manager must be set up with a secret:
+
+/sdp/tools/repoarchive/repo-archive-github.pem
+A plaintext secret, containing the contents of the .pem file created when a Github App was installed.
+
 ## Setup - Running in a container
 1. Build a Docker Image
 
