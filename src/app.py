@@ -213,16 +213,21 @@ with repository_tab:
     else:
         st.write("Please select at least one rule.")
 
+# SLO Analysis Section
+
 with slo_tab:
     st.header("SLO Analysis")
 
     st.subheader("Secret Scanning Alerts")
     st.write("Alerts open for more than 5 days.")
 
+    # Rename the columns of the DataFrame
     df_secret_scanning.columns = ["Repository Name", "Type", "Secret", "Link"]
 
+    # Group the DataFrame by the repository name and the type
     df_secret_scanning_grouped = df_secret_scanning.groupby(["Repository Name", "Type"]).count().reset_index()
 
+    # Rename the columns of the grouped DataFrame
     df_secret_scanning_grouped.columns = ["Repository Name", "Type", "Number of Secrets", "Link"]
 
     col1, col2 = st.columns([0.8, 0.2])
@@ -239,6 +244,7 @@ with slo_tab:
     with col2:
         st.metric("Total Alerts", df_secret_scanning_grouped["Number of Secrets"].sum())
 
+    # If an alert is selected, display the secrets that are open
     if len(selected_secret["selection"]["rows"]) > 0:
         selected_secret = selected_secret["selection"]["rows"][0]
 
@@ -272,9 +278,12 @@ with slo_tab:
     repo_type = col2.selectbox("Repository Type", ["all", "public", "private", "internal"], key="dependabot_repo_type")
     minimum_days = st.slider("Minimum Days Open", 0, df_dependabot["Days Open"].max(), 0)
 
+    # If any severity levels are selected, populate the rest of the dashboard
     if len(severity) > 0:
+        # Filter the DataFrame by the selected severity levels and the minimum days open
         df_dependabot = df_dependabot.loc[df_dependabot["Severity"].isin(severity) & (df_dependabot["Days Open"] >= minimum_days)]
 
+        # Filter the DataFrame by the selected repository type
         if repo_type != "all":
             df_dependabot = df_dependabot.loc[df_dependabot["Type"] == repo_type]
 
@@ -296,9 +305,11 @@ with slo_tab:
         col1, col2 = st.columns([0.7, 0.3])
 
         with col1:
+            # Create a dataframe summarising the alerts by severity
             df_dependabot_severity_grouped = df_dependabot.groupby("Severity").count().reset_index()[["Severity", "Repository Name"]]
             df_dependabot_severity_grouped.columns = ["Severity", "Number of Alerts"]
 
+            # Create a pie chart to show the alerts by severity
             fig = px.pie(
                 df_dependabot_severity_grouped,
                 names="Severity",
@@ -324,6 +335,7 @@ with slo_tab:
             hide_index=True
         )
 
+        # If a repository is selected, display the alerts that are open for that repository
         if len(selected_repo["selection"]["rows"]) > 0:
             selected_repo = selected_repo["selection"]["rows"][0]
 
@@ -343,5 +355,7 @@ with slo_tab:
                     )
                 }
             )
+
+    # If no severity levels are selected, prompt the user to select at least one severity level
     else:
         st.write("Please select at least one severity level.")
