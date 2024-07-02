@@ -46,7 +46,7 @@ def load_data():
     """
     bucket_name = "sdp-sandbox-github-audit-dashboard"
 
-    session = boto3.Session(profile_name="ons_sdp_sandbox")
+    session = boto3.Session()
     s3 = session.client("s3")
 
     df_repositories = get_table_from_s3(s3, bucket_name, "repositories.json", "repositories.json")

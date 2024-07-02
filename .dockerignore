@@ -1,0 +1,9 @@
+/lambda/
+/screen_designs/
+/venv/
+
+__pycache__
+
+repositories.json
+secret_scanning.json
+dependabot.json
