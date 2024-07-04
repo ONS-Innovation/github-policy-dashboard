@@ -5,3 +5,7 @@ __pycache__
 repositories.json
 secret_scanning.json
 dependabot.json
+
+.pytest_cache/
+.coverage
+htmlcov

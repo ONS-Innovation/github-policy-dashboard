@@ -13,6 +13,12 @@ from botocore.exceptions import ClientError
 
 # st.set_page_config(layout="wide")
 
+def get_s3_client() -> boto3.client:
+    session = boto3.Session()
+    s3 = session.client("s3")
+    return s3
+
+
 def get_table_from_s3(s3, bucket_name: str, object_name: str, filename: str) -> pd.DataFrame | str:
     """
         Gets a JSON file from an S3 bucket and returns it as a Pandas DataFrame.
@@ -37,7 +43,7 @@ def get_table_from_s3(s3, bucket_name: str, object_name: str, filename: str) -> 
 
     return pd.json_normalize(file_json)
 
-# @st.cache_data
+@st.cache_data
 def load_data():
     """
         Loads the data from the S3 bucket and returns it as a Pandas DataFrame.
@@ -46,8 +52,7 @@ def load_data():
     """
     bucket_name = "sdp-sandbox-github-audit-dashboard"
 
-    session = boto3.Session()
-    s3 = session.client("s3")
+    s3 = get_s3_client()
 
     df_repositories = get_table_from_s3(s3, bucket_name, "repositories.json", "repositories.json")
     df_secret_scanning = get_table_from_s3(s3, bucket_name, "secret_scanning.json", "secret_scanning.json")
@@ -62,6 +67,17 @@ def load_data():
 
 df_repositories, df_secret_scanning, df_dependabot = load_data()
 
+if type(df_repositories) == str:
+    st.error(df_repositories)
+    st.stop()
+
+if type(df_secret_scanning) == str:
+    st.error(df_secret_scanning)
+    st.stop()
+
+if type(df_dependabot) == str: 
+    st.error(df_dependabot)
+    st.stop()
 
 # Title of the dashboard
 st.title("GitHub Audit Dashboard")

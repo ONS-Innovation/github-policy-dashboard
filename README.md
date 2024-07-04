@@ -11,7 +11,7 @@ This project uses poetry for package management and colima/docker for containeri
 1. Navigate into the project's folder and create a virtual environment using `python3 -m venv venv`
 2. Activate the virtual environment using `source venv/bin/activate`
 3. Install all project dependancies using `poetry install`
-4. When running the project locally, you need to edit `load_data()` within `app.py`.
+4. When running the project locally, you need to edit `get_s3_client()` within `app.py`.
 
 When creating an instance of `boto3.Session()`, you must pass which AWS credential profile to use, as found in `~/.aws/credentials`.
 
@@ -95,7 +95,7 @@ When you make changes to the dashboard, a new container image must be pushed to 
 
 These instructions assume:
 
-1. You have a repository set up in your AWS account named copilot-usage-lambda-script.
+1. You have a repository set up in your AWS account named github-audit-dashboard.
 2. You have created an AWS IAM user with permissions to read/write to ECR (e.g AmazonEC2ContainerRegistryFullAccess policy) and that you have created the necessary access keys for this user.  The credentials for this user are stored in ~/.aws/credentials and can be used by accessing --profile <aws-credentials-profile\>, if these are the only credentials in your file then the profile name is _default_
 
 You can find the AWS repo push commands under your repository in ECR by selecting the "View Push Commands" button.  This will display a guide to the following (replace <aws-credentials-profile\>, <aws-account-id\> and <version\> accordingly):
