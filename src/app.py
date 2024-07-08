@@ -111,11 +111,11 @@ with repository_tab:
 
     with col1:
         if st.button("Security Preset", use_container_width=True):
-            st.session_state["selected_rules"] = rules[:3] + [rules[6]] + [rules[8]]
+            st.session_state["selected_rules"] = rules[:3] + [rules[5]] + [rules[7]]
 
     with col2:
         if st.button("Policy Preset", use_container_width=True):
-            st.session_state["selected_rules"] = rules[0:6] + [rules[8]]
+            st.session_state["selected_rules"] = rules[0:7] + [rules[8]]
 
     selected_rules = st.multiselect("Select rules", rules, st.session_state["selected_rules"])
 
@@ -147,6 +147,9 @@ with repository_tab:
         # Sort the DataFrame by the number of rules broken and the repository name
         df_repositories = df_repositories.sort_values(by=["rules_broken", "repository"], ascending=[False, True])
 
+        # Rename the columns of the DataFrame
+        df_repositories.columns = ["Repository", "Repository Type", "URL"] + selected_rules + ["Is Compliant", "Rules Broken"]
+
         st.subheader("Repository Compliance")
 
         # Display the rules that are being checked
@@ -156,18 +159,30 @@ with repository_tab:
 
         for i in range(0, len(selected_rules)):
             if i % 2 == 0:
-                col1.write(f"- {selected_rules[i].replace('_', ' ')}")
+                col1.write(f"- {selected_rules[i].replace('_', ' ').title()}")
             else:
-                col2.write(f"- {selected_rules[i].replace('_', ' ')}")
+                col2.write(f"- {selected_rules[i].replace('_', ' ').title()}")
+
+        with st.expander("See Rule Descriptions"):
+            st.subheader("Rule Descriptions")
+            st.write("- Inactive: The repository has not been updated in the last year.")
+            st.write("- Unprotected Branches: The repository has unprotected branches.")
+            st.write("- Unsigned Commits: One of the last 15 commits to this repository is unsigned.")
+            st.write("- Readme Missing: The repository does not have a README file.")
+            st.write("- License Missing: The repository does not have a LICENSE file (Public Only).")
+            st.write("- PIRR Missing: The repository does not have a PIRR file (Private/Internal Only).")
+            st.write("- Gitignore Missing: The repository does not have a .gitignore file.")
+            st.write("- External PR: The repository has a pull request from a user which isn't a member of the organisation.")
+            st.write("- Breaks Naming Convention: The repository name does not follow ONS naming convention (No Capitals, Special Characters or Spaces).")
 
         st.divider()
 
         col1, col2 = st.columns(2)
 
         # Create a dataframe summarising the compliance of the repositories
-        df_compliance = df_repositories["is_compliant"].value_counts().reset_index()
+        df_compliance = df_repositories["Is Compliant"].value_counts().reset_index()
 
-        df_compliance["is_compliant"] = df_compliance["is_compliant"].apply(lambda x: "Compliant" if x else "Non-Compliant")
+        df_compliance["Is Compliant"] = df_compliance["Is Compliant"].apply(lambda x: "Compliant" if x else "Non-Compliant")
 
         df_compliance.columns = ["Compliance", "Number of Repositories"]
 
@@ -191,16 +206,16 @@ with repository_tab:
 
             st.metric("Compliant Repositories", compliant_repositories)
             st.metric("Non-Compliant Repositories", noncompliant_repositories)
-            st.metric("Average Rules Broken", int(df_repositories["rules_broken"].mean().round(0)))
+            st.metric("Average Rules Broken", int(df_repositories["Rules Broken"].mean().round(0)))
 
             rule_frequency = df_repositories[selected_rules].sum()
-            st.metric("Most Common Rule Broken", rule_frequency.idxmax().replace("_", " "))
+            st.metric("Most Common Rule Broken", rule_frequency.idxmax().replace("_", " ").title())
 
         # Display the repositories that are non-compliant
         st.subheader("Non-Compliant Repositories")
 
         selected_repo = st.dataframe(
-            df_repositories[["repository", "repository_type", "rules_broken"]].loc[df_repositories["is_compliant"] == 0],
+            df_repositories[["Repository", "Repository Type", "Rules Broken"]].loc[df_repositories["Is Compliant"] == 0],
             on_select="rerun",
             selection_mode=["single-row"],
             use_container_width=True,
@@ -217,13 +232,15 @@ with repository_tab:
 
             col1, col2 = st.columns([0.8, 0.2])
 
-            col1.subheader(f"{selected_repo["repository"]} ({selected_repo["repository_type"].capitalize()})")
-            col2.write(f"[Go to Repository]({selected_repo['url']})")
+            col1.subheader(f"{selected_repo["Repository"]} ({selected_repo["Repository Type"].capitalize()})")
+            col2.write(f"[Go to Repository]({selected_repo['URL']})")
 
             st.subheader("Rules Broken:")      
 
             for check in failed_checks.index:
-                st.write(f"- {check.replace('_', ' ')}")  
+                st.write(f"- {check.replace('_', ' ').title()}")  
+        else:
+            st.caption("Select a repository for more information.")
 
     # If no rules are selected, prompt the user to select at least one rule
     else:
@@ -278,7 +295,9 @@ with slo_tab:
                     display_text="Go to Alert"
                 )
             }
-        )  
+        ) 
+    else:
+        st.caption("Select a repository for more information.") 
 
     st.divider()
 
@@ -313,10 +332,10 @@ with slo_tab:
         df_dependabot_grouped["Severity"] = df_dependabot_grouped["Severity Weight"].map({4: "Critical", 3: "High", 2: "Medium", 1: "Low"})
 
         # Rename the columns of the grouped DataFrame
-        df_dependabot_grouped.columns = ["Repository Name", "Type", "Number of Alerts", "Severity Weight", "Days Open", "Severity"]
+        df_dependabot_grouped.columns = ["Repository Name", "Type", "Number of Alerts", "Severity Weight", "Max Days Open", "Max Severity"]
 
         # Sort the grouped DataFrame by the severity weight and the days open
-        df_dependabot_grouped.sort_values(by=["Severity Weight", "Days Open"], ascending=[False, False], inplace=True)
+        df_dependabot_grouped.sort_values(by=["Severity Weight", "Max Days Open"], ascending=[False, False], inplace=True)
 
         col1, col2 = st.columns([0.7, 0.3])
 
@@ -338,13 +357,13 @@ with slo_tab:
 
         with col2:
             st.metric("Total Alerts", df_dependabot_grouped["Number of Alerts"].sum())
-            st.metric("Average Days Open", int(df_dependabot_grouped["Days Open"].mean().round(0)))
+            st.metric("Average Days Open", int(df_dependabot_grouped["Max Days Open"].mean().round(0)))
 
             st.metric("Number of Repositories", df_dependabot_grouped["Repository Name"].count())
             st.metric("Avg. Alerts per Repository", int(df_dependabot_grouped["Number of Alerts"].mean().round(0)))
 
         selected_repo = st.dataframe(
-            df_dependabot_grouped[["Repository Name", "Type", "Number of Alerts", "Severity", "Days Open"]],
+            df_dependabot_grouped[["Repository Name", "Type", "Number of Alerts", "Max Severity", "Max Days Open"]],
             use_container_width=True,
             on_select="rerun",
             selection_mode=["single-row"],
@@ -371,6 +390,9 @@ with slo_tab:
                     )
                 }
             )
+
+        else:
+            st.caption("Select a repository for more information.")
 
     # If no severity levels are selected, prompt the user to select at least one severity level
     else:
