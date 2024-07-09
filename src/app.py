@@ -11,10 +11,11 @@ import json
 import boto3
 from botocore.exceptions import ClientError
 
-# st.set_page_config(layout="wide")
+st.set_page_config(page_title="GitHub Audit Dashboard", page_icon="./src/branding/ONS-symbol_digital.svg", layout="wide")
+st.logo("./src/branding/ONS_Logo_Digital_Colour_Landscape_Bilingual_RGB.svg")
 
 def get_s3_client() -> boto3.client:
-    session = boto3.Session()
+    session = boto3.Session(profile_name="ons_sdp_sandbox")
     s3 = session.client("s3")
     return s3
 
@@ -79,8 +80,13 @@ if type(df_dependabot) == str:
     st.error(df_dependabot)
     st.stop()
 
-# Title of the dashboard
-st.title("GitHub Audit Dashboard")
+
+col1, col2 = st.columns([0.8, 0.2])
+
+col1.title(":blue-background[GitHub Audit Dashboard]")
+
+col2.image("./src/branding/ONS_Logo_Digital_Colour_Landscape_Bilingual_RGB.png")
+
 
 # Tabs for Repository Analysis and SLO Analysis Sections
 repository_tab, slo_tab = st.tabs(["Repository Analysis", "SLO Analysis"])
@@ -88,7 +94,7 @@ repository_tab, slo_tab = st.tabs(["Repository Analysis", "SLO Analysis"])
 # Repository Analysis Section
 
 with repository_tab:
-    st.header("Repository Analysis")
+    st.header(":blue-background[Repository Analysis]")
     
     # Gets the rules from the repository DataFrame
     rules = df_repositories.columns.to_list()[3:]
@@ -150,7 +156,7 @@ with repository_tab:
         # Rename the columns of the DataFrame
         df_repositories.columns = ["Repository", "Repository Type", "URL"] + selected_rules + ["Is Compliant", "Rules Broken"]
 
-        st.subheader("Repository Compliance")
+        st.subheader(":blue-background[Repository Compliance]")
 
         # Display the rules that are being checked
         st.write("Checking for the following rules:")
@@ -174,6 +180,8 @@ with repository_tab:
             st.write("- Gitignore Missing: The repository does not have a .gitignore file.")
             st.write("- External PR: The repository has a pull request from a user which isn't a member of the organisation.")
             st.write("- Breaks Naming Convention: The repository name does not follow ONS naming convention (No Capitals, Special Characters or Spaces).")
+
+            st.caption("**Note:** All rules are interpreted from ONS' [GitHub Usage Policy](https://officenationalstatistics.sharepoint.com/sites/ONS_DDaT_Communities/Software%20Engineering%20Policies/Forms/AllItems.aspx?id=%2Fsites%2FONS%5FDDaT%5FCommunities%2FSoftware%20Engineering%20Policies%2FSoftware%20Engineering%20Policies%2FApproved%2FPDF%2FGitHub%20Usage%20Policy%2Epdf&parent=%2Fsites%2FONS%5FDDaT%5FCommunities%2FSoftware%20Engineering%20Policies%2FSoftware%20Engineering%20Policies%2FApproved%2FPDF).")
 
         st.divider()
 
@@ -212,7 +220,7 @@ with repository_tab:
             st.metric("Most Common Rule Broken", rule_frequency.idxmax().replace("_", " ").title())
 
         # Display the repositories that are non-compliant
-        st.subheader("Non-Compliant Repositories")
+        st.subheader(":blue-background[Non-Compliant Repositories]")
 
         selected_repo = st.dataframe(
             df_repositories[["Repository", "Repository Type", "Rules Broken"]].loc[df_repositories["Is Compliant"] == 0],
@@ -232,7 +240,7 @@ with repository_tab:
 
             col1, col2 = st.columns([0.8, 0.2])
 
-            col1.subheader(f"{selected_repo["Repository"]} ({selected_repo["Repository Type"].capitalize()})")
+            col1.subheader(f":blue-background[{selected_repo["Repository"]} ({selected_repo["Repository Type"].capitalize()})]")
             col2.write(f"[Go to Repository]({selected_repo['URL']})")
 
             st.subheader("Rules Broken:")      
@@ -249,9 +257,9 @@ with repository_tab:
 # SLO Analysis Section
 
 with slo_tab:
-    st.header("SLO Analysis")
+    st.header(":blue-background[SLO Analysis]")
 
-    st.subheader("Secret Scanning Alerts")
+    st.subheader(":blue-background[Secret Scanning Alerts]")
     st.write("Alerts open for more than 5 days.")
 
     # Rename the columns of the DataFrame
@@ -283,7 +291,7 @@ with slo_tab:
 
         selected_secret = df_secret_scanning_grouped.iloc[selected_secret]
 
-        st.subheader(f"{selected_secret['Repository Name']} ({selected_secret['Type']})")
+        st.subheader(f":blue-background[{selected_secret['Repository Name']} ({selected_secret['Type']})]")
 
         st.dataframe(
             df_secret_scanning.loc[df_secret_scanning["Repository Name"] == selected_secret["Repository Name"]],
@@ -301,7 +309,7 @@ with slo_tab:
 
     st.divider()
 
-    st.subheader("Dependabot Alerts")
+    st.subheader(":blue-background[Dependabot Alerts]")
     st.write("Alerts open for more than 5 days (Critical), 15 days (High), 60 days (Medium), 90 days (Low).")    
 
     # Rename the columns of the DataFrame
@@ -376,7 +384,7 @@ with slo_tab:
 
             selected_repo = df_dependabot_grouped.iloc[selected_repo]
 
-            st.subheader(f"{selected_repo['Repository Name']} ({selected_repo['Type']})")
+            st.subheader(f":blue-background[{selected_repo['Repository Name']} ({selected_repo['Type']})]")
 
             st.dataframe(
                 # Get the alerts for the selected repository, sort by severity weight and days open and display the columns
