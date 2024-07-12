@@ -14,6 +14,7 @@ from botocore.exceptions import ClientError
 st.set_page_config(page_title="GitHub Audit Dashboard", page_icon="./src/branding/ONS-symbol_digital.svg", layout="wide")
 st.logo("./src/branding/ONS_Logo_Digital_Colour_Landscape_Bilingual_RGB.svg")
 
+@st.cache_data
 def get_s3_client() -> boto3.client:
     session = boto3.Session(profile_name="ons_sdp_sandbox")
     s3 = session.client("s3")
