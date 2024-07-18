@@ -65,6 +65,8 @@ github-audit-dashboard-lambda                                              lates
 
 3. Run the image locally mapping local host port (9000) to container port (8080) and passing in AWS credentials to download a .pem file from the AWS Secrets Manager to the running container. These credentials will also be used to upload files to S3.
 
+When running the container, environment variables for the GitHub Organisation, GitHub App Client ID, AWS Secret Location for the .pem file and AWS Account Name will need to be passed in also.
+
 The credentials used in the below command are for a user in AWS that has permissions to retrieve secrets from AWS Secrets Manager and upload files to AWS S3.
 
 ```
@@ -72,6 +74,10 @@ docker run --platform linux/amd64 -p 9000:8080 \
 -e AWS_ACCESS_KEY_ID=<aws_access_key_id> \
 -e AWS_SECRET_ACCESS_KEY=<aws_secret_access_key_id> \
 -e AWS_DEFAULT_REGION=eu-west-2 \
+-e AWS_SECRET_NAME=<aws_secret_name> \
+-e GITHUB_ORG=ONS-Innovation \
+-e GITHUB_APP_CLIENT_ID=<github_app_client_id> \
+-e AWS_ACCOUNT_NAME=sdp-sandbox
 github-audit-dashboard-lambda
 ```
 

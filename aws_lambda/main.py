@@ -3,13 +3,17 @@ import policy_checks
 
 import json
 import boto3
+import os
 
-org = "ONS-Innovation"
-client_id = "Iv23lifHcR6yRDTxa7nk"
+org = os.getenv("GITHUB_ORG")
+client_id = os.getenv("GITHUB_APP_CLIENT_ID")
 
 # AWS Secret Manager Secret Name for the .pem file
-secret_name = "/sdp/tools/repoarchive/repo-archive-github.pem"
-secret_reigon = "eu-west-2"
+secret_name = os.getenv("AWS_SECRET_NAME")
+secret_reigon = os.getenv("AWS_DEFAULT_REGION")
+
+account = os.getenv("AWS_ACCOUNT_NAME")
+bucket_name = f"{account}-github-audit-dashboard"
 
 def handler(event, context):
 
@@ -60,15 +64,15 @@ def handler(event, context):
 
     print("Created S3 Client")
 
-    s3.upload_file("/tmp/repositories.json", "sdp-sandbox-github-audit-dashboard", "repositories.json")
+    s3.upload_file("/tmp/repositories.json", bucket_name, "repositories.json")
 
     print("Uploaded Repositories JSON to S3")
 
-    s3.upload_file("/tmp/secret_scanning.json", "sdp-sandbox-github-audit-dashboard", "secret_scanning.json")
+    s3.upload_file("/tmp/secret_scanning.json", bucket_name, "secret_scanning.json")
 
     print("Uploaded Secret Scanning JSON to S3")
 
-    s3.upload_file("/tmp/dependabot.json", "sdp-sandbox-github-audit-dashboard", "dependabot.json")
+    s3.upload_file("/tmp/dependabot.json", bucket_name, "dependabot.json")
 
     print("Uploaded Dependabot JSON to S3")
 
