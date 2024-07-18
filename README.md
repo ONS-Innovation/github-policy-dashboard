@@ -51,7 +51,7 @@ REPOSITORY                                                                 TAG  
 github-audit-dashboard                                                     latest      9a9cb9286a7f   51 seconds ago   906MB
 ```
 
-3. Run the image locally mapping local port 5801 to container port 5801 and passing in AWS credentials to access a .pem file from AWS Secrets Manager while running container.
+3. Run the image locally mapping local port 8501 to container port 8501 and passing in AWS credentials to access a .pem file from AWS Secrets Manager while running container.
 These credentials should also allow access to S3.
 
 ```
@@ -106,7 +106,7 @@ You can find the AWS repo push commands under your repository in ECR by selectin
     aws ecr --profile <aws-credentials-profile> get-login-password --region eu-west-2 | docker login --username AWS --password-stdin <aws-account-id>.dkr.ecr.eu-west-2.amazonaws.com
     ```
 
-2. Tag your latest built docker image for ECR (assumes you have run _docker build -t sdp-repo-archive ._ locally first)
+2. Tag your latest built docker image for ECR (assumes you have run _docker build -t github-audit-dashboard ._ locally first)
 
     ```bash
     docker tag github-audit-dashboard:latest <aws-account-id>.dkr.ecr.eu-west-2.amazonaws.com/github-audit-dashboard:<version>

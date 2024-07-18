@@ -121,7 +121,7 @@ You can find the AWS repo push commands under your repository in ECR by selectin
     aws ecr --profile <aws-credentials-profile> get-login-password --region eu-west-2 | docker login --username AWS --password-stdin <aws-account-id>.dkr.ecr.eu-west-2.amazonaws.com
     ```
 
-2. Tag your latest built docker image for ECR (assumes you have run _docker build -t sdp-repo-archive ._ locally first)
+2. Tag your latest built docker image for ECR (assumes you have run _docker build -t github-audit-dashboard-lambda ._ locally first)
 
     ```bash
     docker tag github-audit-dashboard-lambda:latest <aws-account-id>.dkr.ecr.eu-west-2.amazonaws.com/github-audit-dashboard-lambda:<version>
