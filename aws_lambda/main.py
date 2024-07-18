@@ -1,5 +1,5 @@
-import api_interface as api_interface
-import policy_checks as policy_checks
+import api_interface
+import policy_checks
 
 import json
 import boto3
