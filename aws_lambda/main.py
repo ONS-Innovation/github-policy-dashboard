@@ -1,5 +1,5 @@
-import api_interface
-import policy_checks
+import api_interface as api_interface
+import policy_checks as policy_checks
 
 import json
 import boto3
@@ -46,7 +46,7 @@ def handler(event, context):
     with open("/tmp/repositories.json", "w") as f:
         f.write(json.dumps(repos, indent=4))
 
-    secret_scanning_alerts = policy_checks.get_secret_scanning_alerts(gh, org, 5)
+    secret_scanning_alerts = policy_checks.get_security_alerts(gh, org, 5, "secret_scanning")
 
     with open("/tmp/secret_scanning.json", "w") as f:
         f.write(json.dumps(secret_scanning_alerts, indent=4))
