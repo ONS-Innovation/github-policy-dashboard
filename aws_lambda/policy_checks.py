@@ -63,10 +63,10 @@ def get_security_alerts(gh: api_controller, org: str, days_open: int, alert_type
                 comparison_date = datetime.datetime.today() - datetime.timedelta(days=days_open)
 
                 for alert in alerts:
-                    date_openned = datetime.datetime.strptime(alert["created_at"], "%Y-%m-%dT%H:%M:%SZ")
+                    date_opened = datetime.datetime.strptime(alert["created_at"], "%Y-%m-%dT%H:%M:%SZ")
 
-                    if date_openned < comparison_date:
-                        days_openned = datetime.datetime.today() - date_openned
+                    if date_opened < comparison_date:
+                        days_opened = datetime.datetime.today() - date_opened
 
                         if alert_type == "dependabot":    
                             formatted_alert = {
@@ -75,7 +75,7 @@ def get_security_alerts(gh: api_controller, org: str, days_open: int, alert_type
                                 "dependency": alert["dependency"]["package"]["name"],
                                 "advisory": alert["security_advisory"]["summary"],
                                 "severity": alert["security_advisory"]["severity"],
-                                "days_open": days_openned.days,
+                                "days_open": days_opened.days,
                                 "link": alert["html_url"]
                             }
                         elif alert_type == "secret_scanning":
