@@ -37,11 +37,11 @@ def get_secret_scanning_alerts(gh: api_controller, org: str, days_open: int) -> 
 
         pop_count = 0
 
-        # Remove all alerts openned < 5 days ago
+        # Remove all alerts opened < days_open days ago
         for i in range(0, len(secret_alerts)):
-            date_openned = datetime.datetime.strptime(secret_alerts[i]["created_at"], "%Y-%m-%dT%H:%M:%SZ")
+            date_opened = datetime.datetime.strptime(secret_alerts[i]["created_at"], "%Y-%m-%dT%H:%M:%SZ")
 
-            if date_openned > comparison_date:
+            if date_opened > comparison_date:
                 secret_alerts.pop(i)
                 pop_count += 1
 
