@@ -244,18 +244,21 @@ def check_file_exists(repo_api_url: str, gh: github_interface, files: list[str])
         bool (True if check breaks policy)
     """
 
+    file_missing = True
+
     for file in files:
         file_response = gh.get(repo_api_url.replace("{+path}", file), {}, False)
 
         if type(file_response) == Response:
             if file_response.status_code == 200:
-                return False
+                file_missing = False
+                break
         elif "404" in str(file_response):
-            return True
+            file_missing = True
         else:
             return f"Error: An error has occured when accessing the API. {file_response}"
         
-    return True
+    return file_missing
 
 
 # Any external PR's
@@ -370,7 +373,7 @@ def get_repository_data(gh: github_interface, org: str) -> list[dict] | str:
                                 "inactive": check_inactive(repo),
                                 "unprotected_branches": check_branch_protection(repo["branches_url"].replace("{/branch}", ""), gh),
                                 "unsigned_commits": check_signed_commits(repo["commits_url"].replace("{/sha}", ""), gh),
-                                "readme_missing": check_file_exists(repo["contents_url"], gh, ["README.md", "readme.md"]),
+                                "readme_missing": check_file_exists(repo["contents_url"], gh, ["README.md", "readme.md", "docs/README.md", "docs/readme.md"]),
                                 "license_missing": check_file_exists(repo["contents_url"], gh, ["LICENSE.md", "LICENSE"]),
                                 "pirr_missing": check_file_exists(repo["contents_url"], gh, ["PIRR.md"]),
                                 "gitignore_missing": check_file_exists(repo["contents_url"], gh, [".gitignore"]),
