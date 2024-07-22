@@ -6,10 +6,14 @@ import plotly.graph_objects as go
 import plotly.express as px
 import pandas as pd
 
+import os
 import json
 
 import boto3
 from botocore.exceptions import ClientError
+
+account = os.getenv("AWS_ACCOUNT_NAME")
+bucket_name = f"{account}-github-audit-dashboard"
 
 st.set_page_config(page_title="GitHub Audit Dashboard", page_icon="./src/branding/ONS-symbol_digital.svg", layout="wide")
 st.logo("./src/branding/ONS_Logo_Digital_Colour_Landscape_Bilingual_RGB.svg")
@@ -52,8 +56,6 @@ def load_data():
 
         This function is cached using Streamlit's @st.cache_data decorator.
     """
-    bucket_name = "sdp-sandbox-github-audit-dashboard"
-
     s3 = get_s3_client()
 
     df_repositories = get_table_from_s3(s3, bucket_name, "repositories.json", "repositories.json")
