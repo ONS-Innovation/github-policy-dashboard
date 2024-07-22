@@ -220,11 +220,11 @@ def check_signed_commits(repo_api_url: str, gh: github_interface) -> bool | str:
                     unsigned_commits = True
 
             return unsigned_commits
-        elif commits_response.status_code == 409:
-            # If error 409, then the repository does not have any commits.
-            return False
         else:
             return f"Error {commits_response.status_code}: {commits_response.json()["message"]}"
+    elif "409" in str(commits_response):
+        # If error 409, then the repository does not have any commits.
+        return False
     else:
         return f"Error: An error has occured when accessing the API. {commits_response}"
 
