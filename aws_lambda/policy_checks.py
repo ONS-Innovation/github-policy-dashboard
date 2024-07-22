@@ -304,15 +304,18 @@ def check_external_pr(repo_api_url: str, repo_full_name: str, gh: github_interfa
             for member in members:
                 org_members.append(member["login"])
 
+        has_external_pr = False
+
         for pr in pulls_response.json():
             author = pr["user"]["login"]
 
-            if author not in org_members:
-                return True
-            elif author == "dependabot[bot]":
-                return False
+            if author == "dependabot[bot]":
+                has_external_pr = False
+            elif author not in org_members:
+                has_external_pr = True
+                break
             
-        return False
+        return has_external_pr
     
     else:
         return f"Error {members_response.status_code}: {members_response.json()["message"]}"
