@@ -309,6 +309,8 @@ def check_external_pr(repo_api_url: str, repo_full_name: str, gh: github_interfa
 
             if author not in org_members:
                 return True
+            elif author == "dependabot[bot]":
+                return False
             
         return False
     
