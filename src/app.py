@@ -183,6 +183,8 @@ with repository_tab:
             st.write("- Gitignore Missing: The repository does not have a .gitignore file.")
             st.write("- External PR: The repository has a pull request from a user which isn't a member of the organisation.")
             st.write("- Breaks Naming Convention: The repository name does not follow ONS naming convention (No Capitals, Special Characters or Spaces).")
+            st.write("- Secret Scanning Disabled: The repository does not have secret scanning enabled.")
+            st.write("- Dependabot Disabled: The repository does not have dependabot enabled.")
 
             st.caption("**Note:** All rules are interpreted from ONS' [GitHub Usage Policy](https://officenationalstatistics.sharepoint.com/sites/ONS_DDaT_Communities/Software%20Engineering%20Policies/Forms/AllItems.aspx?id=%2Fsites%2FONS%5FDDaT%5FCommunities%2FSoftware%20Engineering%20Policies%2FSoftware%20Engineering%20Policies%2FApproved%2FPDF%2FGitHub%20Usage%20Policy%2Epdf&parent=%2Fsites%2FONS%5FDDaT%5FCommunities%2FSoftware%20Engineering%20Policies%2FSoftware%20Engineering%20Policies%2FApproved%2FPDF).")
 

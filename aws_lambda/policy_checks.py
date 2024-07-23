@@ -337,6 +337,45 @@ def check_breaks_naming(repo_name: str) -> bool | str:
         
     return False
 
+def check_secret_scanning_enabled(repo: dict) -> bool:
+    """Checks if Secret Scanning is enabled for a given repository.
+
+    Args:
+        repo (dict): The JSON response for the repository
+
+    Returns:
+        bool: True if Secret Scanning is disabled, False if enabled.
+    """
+    if repo["visibility"] == "public":
+        if repo["security_and_analysis"]["secret_scanning"]["status"] == "disabled":
+            return True
+        else:
+            return False
+    else:
+        # If Repository is private/internal, Secret Scanning does not apply as it is Advanced Security Feature
+        return False
+
+def check_dependabot_enabled(gh: github_interface, repo_url: str) -> bool | str:
+    """Checks if Dependabot is enabled for a given repository.
+
+    Args:
+        gh (github_interface): An instance of the github_interface class to make calls to the GitHub API.
+        repo_url (str): The API endpoint for the repository to check.
+
+    Returns:
+        bool | str: True if Dependabot is disabled, False if enabled, or an error message.
+    """
+    url = repo_url + "/vulnerability-alerts"
+
+    dependabot_response = gh.get(url, {}, False)
+
+    if type(dependabot_response) == Response:
+        if dependabot_response.status_code == 204:
+            return False
+    elif "404" in str(dependabot_response):
+        return True
+    else:
+        return f"Error: An error has occured when accessing the API. {dependabot_response}"
 
 # Uses the above checks to get the repository data
 def get_repository_data(gh: github_interface, org: str) -> list[dict] | str:
@@ -383,7 +422,9 @@ def get_repository_data(gh: github_interface, org: str) -> list[dict] | str:
                                 "pirr_missing": check_file_exists(repo["contents_url"], gh, ["PIRR.md"]),
                                 "gitignore_missing": check_file_exists(repo["contents_url"], gh, [".gitignore"]),
                                 "external_pr": check_external_pr(repo["pulls_url"].replace("{/number}", ""), repo["full_name"], gh),
-                                "breaks_naming_convention": check_breaks_naming(repo["name"])
+                                "breaks_naming_convention": check_breaks_naming(repo["name"]),
+                                "secret_scanning_disabled": check_secret_scanning_enabled(repo),
+                                "dependabot_disabled": check_dependabot_enabled(gh, repo["url"])
                             }
                         }
 
