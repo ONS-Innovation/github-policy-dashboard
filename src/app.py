@@ -69,7 +69,26 @@ def load_data():
 
     return df_repositories, df_secret_scanning, df_dependabot
 
+@st.cache_data
+def load_file(filename: str) -> dict:
+    """Loads a JSON file and returns it as a dictionary.
+
+    This function is cached using Streamlit's @st.cache_data decorator.
+
+    Args:
+        filename (str): The path of the JSON file to load.
+
+    Returns:
+        dict: The JSON file loaded as a dictionary.
+    """
+    with open(filename, "r") as f:
+        file_json = json.load(f)
+
+    return file_json
+
 df_repositories, df_secret_scanning, df_dependabot = load_data()
+
+rulemap = load_file("rulemap.json")
 
 if type(df_repositories) == str:
     st.error(df_repositories)
@@ -112,7 +131,10 @@ with repository_tab:
     # Uses streamlit's session state to store the selected rules
     # This is so that selected rules persist with other inputs (i.e the preset buttons)
     if "selected_rules" not in st.session_state:
-        st.session_state["selected_rules"] = rules
+        st.session_state["selected_rules"] = []
+        
+        for rule in rulemap:
+            st.session_state["selected_rules"].append(rule["name"])
 
     # Preset Buttons
     
@@ -120,11 +142,19 @@ with repository_tab:
 
     with col1:
         if st.button("Security Preset", use_container_width=True):
-            st.session_state["selected_rules"] = rules[:3] + [rules[5]] + [rules[7]]
+            st.session_state["selected_rules"] = []
+
+            for rule in rulemap:
+                if rule["is_security_rule"]:
+                    st.session_state["selected_rules"].append(rule["name"])
 
     with col2:
         if st.button("Policy Preset", use_container_width=True):
-            st.session_state["selected_rules"] = rules[0:7] + [rules[8]]
+            st.session_state["selected_rules"] = []
+
+            for rule in rulemap:
+                if rule["is_policy_rule"]:
+                    st.session_state["selected_rules"].append(rule["name"])
 
     selected_rules = st.multiselect("Select rules", rules, st.session_state["selected_rules"])
 
@@ -174,17 +204,9 @@ with repository_tab:
 
         with st.expander("See Rule Descriptions"):
             st.subheader("Rule Descriptions")
-            st.write("- Inactive: The repository has not been updated in the last year.")
-            st.write("- Unprotected Branches: The repository has unprotected branches.")
-            st.write("- Unsigned Commits: One of the last 15 commits to this repository is unsigned.")
-            st.write("- Readme Missing: The repository does not have a README file.")
-            st.write("- License Missing: The repository does not have a LICENSE file (Public Only).")
-            st.write("- PIRR Missing: The repository does not have a PIRR file (Private/Internal Only).")
-            st.write("- Gitignore Missing: The repository does not have a .gitignore file.")
-            st.write("- External PR: The repository has a pull request from a user which isn't a member of the organisation.")
-            st.write("- Breaks Naming Convention: The repository name does not follow ONS naming convention (No Capitals, Special Characters or Spaces).")
-            st.write("- Secret Scanning Disabled: The repository does not have secret scanning enabled.")
-            st.write("- Dependabot Disabled: The repository does not have dependabot enabled.")
+            
+            for rule in rulemap:
+                st.write(f"- {rule['name'].replace('_', ' ').title()}: {rule['description']}")
 
             st.caption("**Note:** All rules are interpreted from ONS' [GitHub Usage Policy](https://officenationalstatistics.sharepoint.com/sites/ONS_DDaT_Communities/Software%20Engineering%20Policies/Forms/AllItems.aspx?id=%2Fsites%2FONS%5FDDaT%5FCommunities%2FSoftware%20Engineering%20Policies%2FSoftware%20Engineering%20Policies%2FApproved%2FPDF%2FGitHub%20Usage%20Policy%2Epdf&parent=%2Fsites%2FONS%5FDDaT%5FCommunities%2FSoftware%20Engineering%20Policies%2FSoftware%20Engineering%20Policies%2FApproved%2FPDF).")
 
