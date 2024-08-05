@@ -8,6 +8,13 @@ This project uses poetry for package management and colima/docker for containeri
 [Instructions to install Colima](https://github.com/abiosoft/colima/blob/main/README.md)
 
 ## Setup - Run outside of Docker
+
+Prior to running outside of Docker ensure you have the necessary environment variables setup locally where you are running the application. E.g in linux or OSX you can run the following, providing appropriate values for the variables:
+
+```bash
+export AWS_ACCOUNT_NAME=sdp-sandbox
+```
+
 1. Navigate into the project's folder and create a virtual environment using `python3 -m venv venv`
 2. Activate the virtual environment using `source venv/bin/activate`
 3. Install all project dependancies using `poetry install`
@@ -59,6 +66,7 @@ docker run -p 8501:8501 \
 -e AWS_ACCESS_KEY_ID=<aws_access_key_id> \
 -e AWS_SECRET_ACCESS_KEY=<aws_secret_access_key_id> \
 -e AWS_DEFAULT_REGION=eu-west-2 \
+-e AWS_ACCOUNT_NAME=sdp-sandbox
 github-audit-dashboard
 ```
 

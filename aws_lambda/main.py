@@ -1,4 +1,5 @@
-import api_interface
+# import api_interface
+import github_api_toolkit
 import policy_checks
 
 import json
@@ -31,11 +32,16 @@ def handler(event, context):
 
     print("Got .pem file from AWS Secrets Manager")
 
-    token = api_interface.get_access_token(org, secret, client_id)
+    token = github_api_toolkit.get_token_as_installation(org, secret, client_id)
+
+    # Check if the token is a string, if it is then an error occurred
+    if type(token) == str:
+        print("Failed to get GitHub Access Token")
+        return
 
     print("Got GitHub Access Token")
 
-    gh = api_interface.api_controller(token[0])
+    gh = github_api_toolkit.github_interface(token[0])
 
     print("Created GitHub API Controller")
 
