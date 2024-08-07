@@ -1,0 +1,32 @@
+site_name: GitHub Policy Dashboard
+
+repo_url: https://github.com/ONS-Innovation/github-policy-dashboard
+repo_name: GitHub Policy Dashboard
+
+nav:
+  - Home: 'index.md'
+  - 'Initial Designs':
+    - Requirement Scoping: 'initial_scoping.md'
+    - Screen Designs: 'screen_designs.md'
+  - Documentation: 'documentation.md'
+theme:
+  name: material
+  palette:
+    scheme: slate
+  features:
+    - content.code.copy
+
+  logo: ./src/branding/ONS_Logo_Digital_Colour_Landscape_Bilingual_RGB.png
+  favicon: ./src/branding/ONS-symbol_digital.svg
+
+  icon:
+    repo: fontawesome/brands/github
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
