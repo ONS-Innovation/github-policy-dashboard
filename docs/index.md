@@ -21,7 +21,28 @@ The dashboard is written in Python and uses [Streamlit](https://streamlit.io/) t
 
 ![Architecture Diagram](./diagrams/architecture.png)
 
-TODO: Describe Diagram
+This project uses 4 major components:
+
+- The Dashboard
+- The Lambda Function
+- The Policy Checks (policy_checks.py)
+- The GitHub API Toolkit (**stored in another repository** - [Repository Link](https://github.com/ONS-Innovation/github-api-package))
+
+### The Dashboard
+
+This component displays the data back to the user. The dashboard will gather all of the data from an S3 bucket.
+
+### The Lambda Function
+
+This component is responsible for collecting and maintaining the data from GitHub. The function collects information from the GitHub API through the use of the GitHub API Toolkit, applies a series of checks to the responses using `policy_checks.py` and then stores the information within an S3 bucket. 
+
+### The Policy Checks
+
+This component contains all the business logic to query the data retrieved from GitHub. The script also contains the logic to retrieve the data using the toolkit. Each policy check is written in its own function, and should return true if the check is failed/breaks policy.
+
+### The GitHub API Toolkit
+
+This component is an imported library which is shared across multiple GitHub tools. The toolkit allows applications to make authenticated requests to the GitHub API. It is imported and used in the Lambda function.
 
 ## High Level Data Overview
 

@@ -9,3 +9,6 @@ dependabot.json
 .pytest_cache/
 .coverage
 htmlcov
+
+# MkDocs Build
+site/
