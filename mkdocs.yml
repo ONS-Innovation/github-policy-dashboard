@@ -9,7 +9,7 @@ nav:
     - Requirement Scoping: 'initial_scoping.md'
     - Screen Designs: 'screen_designs.md'
   - Documentation: 'documentation.md'
-  
+
 theme:
   name: material
   language: en
@@ -48,7 +48,7 @@ theme:
   
 
   logo: assets/logo.png
-  favicon: assets/favicon.svg
+  favicon: assets/favicon.ico
 
   icon:
     repo: fontawesome/brands/github
