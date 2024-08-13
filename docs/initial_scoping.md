@@ -1,8 +1,10 @@
-# Github Audit Dashboard Requirements
+# Github Policy Dashboard Requirements
 
 The dashboard's main purpose is to identify repositories/users which violate ONS' [Github Usage Policy](https://officenationalstatistics.sharepoint.com/sites/ONS_DDaT_Communities/Software%20Engineering%20Policies/Forms/AllItems.aspx?id=%2Fsites%2FONS%5FDDaT%5FCommunities%2FSoftware%20Engineering%20Policies%2FSoftware%20Engineering%20Policies%2FApproved%2FPDF%2FGitHub%20Usage%20Policy%2Epdf&parent=%2Fsites%2FONS%5FDDaT%5FCommunities%2FSoftware%20Engineering%20Policies%2FSoftware%20Engineering%20Policies%2FApproved%2FPDF).
 The dashboard should be able to identify repositories **created after** a given date.
 The dashboard will then be used for manual action and you should be able to mark repositories/users as exempt for breaking a given policy (i.e if a repository is flagged for not having a .gitignore but it will never need one).
+
+**Please Note:** This document covers the initial requirement scoping for the project and may not hold true to updated versions of the dashboard. They are included in documentation to show some initial thought processes and requirements which may provide some useful background information.
 
 ## Policy Tasks
 

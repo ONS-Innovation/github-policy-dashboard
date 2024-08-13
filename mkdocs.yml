@@ -1,0 +1,63 @@
+site_name: GitHub Policy Dashboard
+
+repo_url: https://github.com/ONS-Innovation/github-policy-dashboard
+repo_name: GitHub Policy Dashboard
+
+nav:
+  - Home: 'index.md'
+  - 'Initial Designs':
+    - Requirement Scoping: 'initial_scoping.md'
+    - Screen Designs: 'screen_designs.md'
+  - Documentation: 'documentation.md'
+
+theme:
+  name: material
+  language: en
+
+  palette:
+    # toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: white
+      accent: deep purple
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+
+    # toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: white
+      accent: deep purple
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to system preference
+
+  features:
+    - navigation.tracking
+    - navigation.sections
+    - navigation.path
+    - navigation.top
+    - navigation.footer
+
+    - search.suggest
+
+    - header.autohide
+    - content.code.copy
+
+  
+
+  logo: assets/logo.png
+  favicon: assets/favicon.ico
+
+  icon:
+    repo: fontawesome/brands/github
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
