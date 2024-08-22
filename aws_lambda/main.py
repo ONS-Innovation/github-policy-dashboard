@@ -67,24 +67,15 @@ def handler(event, context):
 
     logger.info("Repository Data Retrieved")
 
-    with open("/tmp/repositories.json", "w") as f:
-        f.write(json.dumps(repos, indent=4))
-
     logger.info("Getting Secret Scanning Alerts")
 
     secret_scanning_alerts = policy_checks.get_security_alerts(gh, org, 5, "secret_scanning")
-
-    with open("/tmp/secret_scanning.json", "w") as f:
-        f.write(json.dumps(secret_scanning_alerts, indent=4))
 
     logger.info("Secret Scanning Alerts Retrieved")
 
     logger.info("Getting Dependabot Alerts")
 
     dependabot_alerts = policy_checks.get_all_dependabot_alerts(gh, org)
-
-    with open("/tmp/dependabot.json", "w") as f:
-        f.write(json.dumps(dependabot_alerts, indent=4))
 
     logger.info("Dependabot Alerts Retrieved")
 
@@ -96,15 +87,15 @@ def handler(event, context):
 
     logger.info("Created S3 Client")
 
-    s3.upload_file("/tmp/repositories.json", bucket_name, "repositories.json")
+    s3.put_object(Bucket=bucket_name, Key="repositories.json", Body=json.dumps(repos, indent=4).encode("utf-8"))
 
     logger.info("Uploaded Repositories JSON to S3")
 
-    s3.upload_file("/tmp/secret_scanning.json", bucket_name, "secret_scanning.json")
+    s3.put_object(Bucket=bucket_name, Key="secret_scanning.json", Body=json.dumps(secret_scanning_alerts, indent=4).encode("utf-8"))
 
     logger.info("Uploaded Secret Scanning JSON to S3")
 
-    s3.upload_file("/tmp/dependabot.json", bucket_name, "dependabot.json")
+    s3.put_object(Bucket=bucket_name, Key="dependabot.json", Body=json.dumps(dependabot_alerts, indent=4).encode("utf-8"))
 
     logger.info("Uploaded Dependabot JSON to S3")
 

@@ -25,7 +25,7 @@ def get_s3_client() -> boto3.client:
     return s3
 
 
-def get_table_from_s3(s3, bucket_name: str, object_name: str, filename: str) -> pd.DataFrame | str:
+def get_table_from_s3(s3, bucket_name: str, object_name: str) -> pd.DataFrame | str:
     """
         Gets a JSON file from an S3 bucket and returns it as a Pandas DataFrame.
 
@@ -33,21 +33,19 @@ def get_table_from_s3(s3, bucket_name: str, object_name: str, filename: str) -> 
             s3: A boto3 S3 client.
             bucket_name: The name of the S3 bucket.
             object_name: The name of the object in the S3 bucket.
-            filename: The name of the file to save the object to.
         Returns:
             A Pandas DataFrame containing the data from the JSON file.
             or
             A string containing an error message.
     """
     try:
-        s3.download_file(bucket_name, object_name, filename)
+        response = s3.get_object(Bucket=bucket_name, Key=object_name)
     except ClientError as e:
-        return (f"An error occurred when getting {filename} data: {e}")
+        return (f"An error occurred when getting {object_name} data: {e}")
     
-    with open(filename, "r") as f:
-        file_json = json.load(f)
+    json_data = json.loads(response["Body"].read().decode("utf-8"))
 
-    return pd.json_normalize(file_json)
+    return pd.json_normalize(json_data)
 
 @st.cache_data
 def load_data():
@@ -58,14 +56,9 @@ def load_data():
     """
     s3 = get_s3_client()
 
-    df_repositories = get_table_from_s3(s3, bucket_name, "repositories.json", "repositories.json")
-    df_secret_scanning = get_table_from_s3(s3, bucket_name, "secret_scanning.json", "secret_scanning.json")
-    df_dependabot = get_table_from_s3(s3, bucket_name, "dependabot.json", "dependabot.json")
-
-    # with open("secret_scanning.json", "r") as f:
-    #     file_json = json.load(f)
-
-    # df_secret_scanning = pd.json_normalize(file_json)
+    df_repositories = get_table_from_s3(s3, bucket_name, "repositories.json")
+    df_secret_scanning = get_table_from_s3(s3, bucket_name, "secret_scanning.json")
+    df_dependabot = get_table_from_s3(s3, bucket_name, "dependabot.json")
 
     return df_repositories, df_secret_scanning, df_dependabot
 
