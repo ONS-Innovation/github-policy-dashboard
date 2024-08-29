@@ -8,6 +8,7 @@ import pandas as pd
 
 import os
 import json
+from datetime import datetime, timedelta
 
 import boto3
 from botocore.exceptions import ClientError
@@ -50,12 +51,16 @@ def get_table_from_s3(s3, bucket_name: str, object_name: str, filename: str) -> 
     return pd.json_normalize(file_json)
 
 @st.cache_data
-def load_data():
+def load_data(load_date: datetime.date):
     """
         Loads the data from the S3 bucket and returns it as a Pandas DataFrame.
 
         This function is cached using Streamlit's @st.cache_data decorator.
+
+        Args:
+            load_date (date): The date and time the data was loaded.
     """
+    
     s3 = get_s3_client()
 
     df_repositories = get_table_from_s3(s3, bucket_name, "repositories.json", "repositories.json")
@@ -86,7 +91,16 @@ def load_file(filename: str) -> dict:
 
     return file_json
 
-df_repositories, df_secret_scanning, df_dependabot = load_data()
+
+loading_date = datetime.now()
+
+# Rounds loading_date to the nearest 10 minutes
+# This means the cached data will refresh every 10 minutes
+
+loading_date = loading_date.strftime("%Y-%m-%d %H:%M")
+loading_date = loading_date[:-1] + "0"
+
+df_repositories, df_secret_scanning, df_dependabot = load_data(loading_date)
 
 rulemap = load_file("rulemap.json")
 
