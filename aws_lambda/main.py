@@ -23,27 +23,17 @@ def handler(event, context):
 
     logger.info("Starting Process")
 
-    logger.info("Creating Boto3 Session")
-
     # Create a boto3 session
     session = boto3.Session()
 
     logger.info("Created Boto3 Session")
-
-    logger.info("Creating Secrets Manager Client")
 
     # Get the .pem file from AWS Secrets Manager
     secret_manager = session.client("secretsmanager", region_name=secret_reigon)
 
     logger.info("Secrets Manager Client Created")
 
-    logger.info("Getting secret from Secrets Manager")
-
     secret = secret_manager.get_secret_value(SecretId=secret_name)["SecretString"]
-
-    logger.info("Got Secret from Secrets Manager")
-
-    logger.info("Getting access token")
 
     token = github_api_toolkit.get_token_as_installation(org, secret, client_id)
 
@@ -53,15 +43,11 @@ def handler(event, context):
         return f"Error getting token: {token}"
 
     else:
-        logger.info("Got GitHub Access Token")
-
-    logger.info("Creating API Controller")
+        logger.info("Got GitHub Access Token using AWS Secret")
 
     gh = github_api_toolkit.github_interface(token[0])
 
     logger.info("Created API Controller")
-
-    logger.info("Getting Repository Data")
 
     repos = policy_checks.get_repository_data(gh, org)
 
@@ -70,16 +56,12 @@ def handler(event, context):
     with open("/tmp/repositories.json", "w") as f:
         f.write(json.dumps(repos, indent=4))
 
-    logger.info("Getting Secret Scanning Alerts")
-
     secret_scanning_alerts = policy_checks.get_security_alerts(gh, org, 5, "secret_scanning")
 
     with open("/tmp/secret_scanning.json", "w") as f:
         f.write(json.dumps(secret_scanning_alerts, indent=4))
 
     logger.info("Secret Scanning Alerts Retrieved")
-
-    logger.info("Getting Dependabot Alerts")
 
     dependabot_alerts = policy_checks.get_all_dependabot_alerts(gh, org)
 
@@ -88,13 +70,9 @@ def handler(event, context):
 
     logger.info("Dependabot Alerts Retrieved")
 
-    logger.info("Pushing Data to S3")
-
-    logger.info("Creating S3 Client")
-
     s3 = session.client('s3')
 
-    logger.info("Created S3 Client")
+    logger.info("S3 Client Created")
 
     s3.upload_file("/tmp/repositories.json", bucket_name, "repositories.json")
 
@@ -108,4 +86,4 @@ def handler(event, context):
 
     logger.info("Uploaded Dependabot JSON to S3")
 
-    logger.info("Process Complete")
+    logger.info(f"Process Complete: data written to {bucket_name}")
