@@ -99,4 +99,12 @@ def handler(event, context):
 
     logger.info("Uploaded Dependabot JSON to S3")
 
-    logger.info(f"Process Complete: data written to {bucket_name}")
+    logger.info(
+        "Process Complete",
+        extra = {
+            "bucket": bucket_name,
+            "no_repos": len(repos),
+            "no_secret_alerts": len(secret_scanning_alerts),
+            "no_dependabot_alerts": len(dependabot_alerts)
+        }
+    )
