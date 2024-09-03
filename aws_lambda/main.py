@@ -21,8 +21,6 @@ logger = logging.getLogger()
 
 def handler(event, context):
 
-    logger.info("Starting Process")
-
     # Create a boto3 session
     session = boto3.Session()
 
@@ -51,7 +49,12 @@ def handler(event, context):
 
     repos = policy_checks.get_repository_data(gh, org)
 
-    logger.info("Repository Data Retrieved")
+    logger.info(
+        "Repository Data Retrieved",
+        extra= {
+            "records_added": len(repos)
+        }
+    )
 
     with open("/tmp/repositories.json", "w") as f:
         f.write(json.dumps(repos, indent=4))
@@ -61,14 +64,24 @@ def handler(event, context):
     with open("/tmp/secret_scanning.json", "w") as f:
         f.write(json.dumps(secret_scanning_alerts, indent=4))
 
-    logger.info("Secret Scanning Alerts Retrieved")
+    logger.info(
+        "Secret Scanning Alerts Retrieved",
+        extra= {
+            "records_added": len(secret_scanning_alerts)
+        }
+    )
 
     dependabot_alerts = policy_checks.get_all_dependabot_alerts(gh, org)
 
     with open("/tmp/dependabot.json", "w") as f:
         f.write(json.dumps(dependabot_alerts, indent=4))
 
-    logger.info("Dependabot Alerts Retrieved")
+    logger.info(
+        "Dependabot Alerts Retrieved",
+        extra= {
+            "records_added": len(dependabot_alerts)
+        }
+    )
 
     s3 = session.client('s3')
 
