@@ -19,6 +19,27 @@ bucket_name = f"{account}-github-audit-dashboard"
 
 logger = logging.getLogger()
 
+# Example Log Output:
+#
+# Standard output:
+# {
+#     "timestamp":"2023-10-27T19:17:45.586Z",
+#     "level":"INFO",
+#     "message":"Inside the handler function",
+#     "logger": "root",
+#     "requestId":"79b4f56e-95b1-4643-9700-2807f4e68189"
+# }
+#
+# Output with extra fields:
+# {
+#     "timestamp":"2023-10-27T19:17:45.586Z",
+#     "level":"INFO",
+#     "message":"Inside the handler function",
+#     "logger": "root",
+#     "requestId":"79b4f56e-95b1-4643-9700-2807f4e68189",
+#     "records_added": 10
+# }
+
 def handler(event, context):
 
     # Create a boto3 session
