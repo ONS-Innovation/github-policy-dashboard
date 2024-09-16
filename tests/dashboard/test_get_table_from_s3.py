@@ -3,10 +3,12 @@ from src.app import get_table_from_s3
 import boto3
 import pandas as pd
 
+
 def get_s3_client() -> boto3.client:
     session = boto3.Session(profile_name="ons_sdp_sandbox")
     s3 = session.client("s3")
     return s3
+
 
 def test_invalid_bucket() -> None:
     """
@@ -20,6 +22,7 @@ def test_invalid_bucket() -> None:
 
     assert type(get_table_from_s3(s3, bucket, object_name, filename)) == str
 
+
 def test_invalid_object_name() -> None:
     """
     Test that the function returns a string when an invalid object name is provided
@@ -31,6 +34,7 @@ def test_invalid_object_name() -> None:
     filename = "repositories.json"
 
     assert type(get_table_from_s3(s3, bucket, object_name, filename)) == str
+
 
 def test_correct_input() -> None:
     """
