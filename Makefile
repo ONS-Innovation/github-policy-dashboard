@@ -12,9 +12,7 @@ all: ## Show the available make targets.
 clean: ## Clean the temporary files.
 	rm -rf .pytest_cache
 	rm -rf .mypy_cache
-	rm -rf .coverage
 	rm -rf .ruff_cache
-	rm -rf megalinter-reports
 
 .PHONY: format
 format:  ## Format the code.
@@ -24,14 +22,20 @@ format:  ## Format the code.
 .PHONY: black
 black:
 	poetry run black src
+	poetry run black awws_lambda
+
 
 .PHONY: ruff
 ruff:
 	poetry run ruff check src --fix
+	poetry run ruff check aws_lambda --fix
+
 
 .PHONY: pylint
 pylint:
 	poetry run pylint src
+	poetry run pylint aws_lambda
+
 
 .PHONY: lint
 lint:  ## Run Python linter
@@ -42,6 +46,8 @@ lint:  ## Run Python linter
 .PHONY: mypy
 mypy:  ## Run mypy.
 	poetry run mypy src
+	poetry run mypy aws_lambda
+
 
 .PHONY: install
 install:  ## Install the dependencies excluding dev.
