@@ -76,9 +76,7 @@ def handler(event, context):
 
     logger.info("Repository Data Retrieved", extra={"records_added": len(repos)})
 
-    secret_scanning_alerts = policy_checks.get_security_alerts(
-        gh, org, 5, "secret_scanning"
-    )
+    secret_scanning_alerts = policy_checks.get_security_alerts(gh, org, 5, "secret_scanning")
 
     logger.info(
         "Secret Scanning Alerts Retrieved",
@@ -87,9 +85,7 @@ def handler(event, context):
 
     dependabot_alerts = policy_checks.get_all_dependabot_alerts(gh, org)
 
-    logger.info(
-        "Dependabot Alerts Retrieved", extra={"records_added": len(dependabot_alerts)}
-    )
+    logger.info("Dependabot Alerts Retrieved", extra={"records_added": len(dependabot_alerts)})
 
     s3 = session.client("s3")
 

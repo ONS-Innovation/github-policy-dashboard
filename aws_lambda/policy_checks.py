@@ -64,9 +64,7 @@ def get_security_alerts(
     """
     formatted_alerts = []
 
-    alerts_response = get_response_for_alert_type(
-        gh, org, alert_type, severity=severity
-    )
+    alerts_response = get_response_for_alert_type(gh, org, alert_type, severity=severity)
 
     if type(alerts_response) == Response:
 
@@ -80,21 +78,15 @@ def get_security_alerts(
 
             for i in range(0, last_page):
 
-                alerts_response = get_response_for_alert_type(
-                    gh, org, alert_type, page_no=i + 1, severity=severity
-                )
+                alerts_response = get_response_for_alert_type(gh, org, alert_type, page_no=i + 1, severity=severity)
 
                 if alerts_response.status_code == 200:
                     alerts = alerts_response.json()
 
-                    comparison_date = datetime.datetime.today() - datetime.timedelta(
-                        days=days_open
-                    )
+                    comparison_date = datetime.datetime.today() - datetime.timedelta(days=days_open)
 
                     for alert in alerts:
-                        date_opened = datetime.datetime.strptime(
-                            alert["created_at"], "%Y-%m-%dT%H:%M:%SZ"
-                        )
+                        date_opened = datetime.datetime.strptime(alert["created_at"], "%Y-%m-%dT%H:%M:%SZ")
 
                         if date_opened < comparison_date:
                             days_opened = datetime.datetime.today() - date_opened
@@ -102,12 +94,8 @@ def get_security_alerts(
                             if alert_type == "dependabot":
                                 formatted_alert = {
                                     "repo": alert["repository"]["name"],
-                                    "type": gh.get(
-                                        alert["repository"]["url"], {}, False
-                                    ).json()["visibility"],
-                                    "dependency": alert["dependency"]["package"][
-                                        "name"
-                                    ],
+                                    "type": gh.get(alert["repository"]["url"], {}, False).json()["visibility"],
+                                    "dependency": alert["dependency"]["package"]["name"],
                                     "advisory": alert["security_advisory"]["summary"],
                                     "severity": alert["security_advisory"]["severity"],
                                     "days_open": days_opened.days,
@@ -116,9 +104,7 @@ def get_security_alerts(
                             elif alert_type == "secret_scanning":
                                 formatted_alert = {
                                     "repo": alert["repository"]["name"],
-                                    "type": gh.get(
-                                        alert["repository"]["url"], {}, False
-                                    ).json()["visibility"],
+                                    "type": gh.get(alert["repository"]["url"], {}, False).json()["visibility"],
                                     "secret": f"{alert["secret_type_display_name"]} - {alert["secret"]}",
                                     "link": alert["html_url"],
                                 }
@@ -151,17 +137,13 @@ def get_all_dependabot_alerts(gh: github_interface, org: str) -> list[dict] | st
         str (an error has occured when accessing the API)
     """
     # Critical alerts open > critical_threshold days
-    critical_alerts = get_security_alerts(
-        gh, org, critical_threshold, "dependabot", "critical"
-    )
+    critical_alerts = get_security_alerts(gh, org, critical_threshold, "dependabot", "critical")
 
     # High alerts open > high_threshold days
     high_alerts = get_security_alerts(gh, org, high_threshold, "dependabot", "high")
 
     # Medium alerts open > medium_threshold days
-    medium_alerts = get_security_alerts(
-        gh, org, medium_threshold, "dependabot", "medium"
-    )
+    medium_alerts = get_security_alerts(gh, org, medium_threshold, "dependabot", "medium")
 
     # Low alerts open > low_threshold days
     low_alerts = get_security_alerts(gh, org, low_threshold, "dependabot", "low")
@@ -195,9 +177,7 @@ def check_inactive(repo: dict) -> bool:
 
     last_update = datetime.datetime.strptime(repo["pushed_at"], "%Y-%m-%dT%H:%M:%SZ")
 
-    comparison_date = datetime.datetime.today() - relativedelta(
-        years=inactive_threshold
-    )
+    comparison_date = datetime.datetime.today() - relativedelta(years=inactive_threshold)
 
     if last_update < comparison_date:
         return True
@@ -240,9 +220,7 @@ def check_branch_protection(repo_api_url: str, gh: github_interface) -> bool | s
         else:
             return f"Error {branches_response.status_code}: {branches_response.json()["message"]}"
     else:
-        return (
-            f"Error: An error has occured when accessing the API. {branches_response}"
-        )
+        return f"Error: An error has occured when accessing the API. {branches_response}"
 
 
 # Repos with unsigned commits
@@ -260,9 +238,7 @@ def check_signed_commits(repo_api_url: str, gh: github_interface) -> bool | str:
         str (an error has occured when accessing the API)
     """
 
-    commits_response = gh.get(
-        repo_api_url, {"per_page": signed_commits_to_check}, False
-    )
+    commits_response = gh.get(repo_api_url, {"per_page": signed_commits_to_check}, False)
 
     if type(commits_response) == Response:
         if commits_response.status_code == 200:
@@ -288,9 +264,7 @@ def check_signed_commits(repo_api_url: str, gh: github_interface) -> bool | str:
 # PIRR.md (private or internal) and .gitignore
 
 
-def check_file_exists(
-    repo_api_url: str, gh: github_interface, files: list[str]
-) -> bool | str:
+def check_file_exists(repo_api_url: str, gh: github_interface, files: list[str]) -> bool | str:
     """
     Checks if a given filename exists in the repository.
     Returns True if file is missing
@@ -315,17 +289,13 @@ def check_file_exists(
         elif "404" in str(file_response):
             file_missing = True
         else:
-            return (
-                f"Error: An error has occured when accessing the API. {file_response}"
-            )
+            return f"Error: An error has occured when accessing the API. {file_response}"
 
     return file_missing
 
 
 # Any external PR's
-def check_external_pr(
-    repo_api_url: str, repo_full_name: str, gh: github_interface
-) -> bool | str:
+def check_external_pr(repo_api_url: str, repo_full_name: str, gh: github_interface) -> bool | str:
     """
     Checks if there are any pull requests in the repository from non-members of the organisation.
     Returns True if there is an external pull request
@@ -362,9 +332,7 @@ def check_external_pr(
             last_page = 1
 
         for i in range(0, last_page):
-            members = gh.get(
-                f"/orgs/{org}/members", {"per_page": 100, "page": i}
-            ).json()
+            members = gh.get(f"/orgs/{org}/members", {"per_page": 100, "page": i}).json()
 
             for member in members:
                 org_members.append(member["login"])
@@ -398,12 +366,7 @@ def check_breaks_naming(repo_name: str) -> bool | str:
         bool (True if check breaks policy)
     """
     for character in repo_name:
-        if (
-            not (
-                character.isnumeric() or character.isalpha() or character in ["_", "-"]
-            )
-            or character.isupper()
-        ):
+        if not (character.isnumeric() or character.isalpha() or character in ["_", "-"]) or character.isupper():
             return True
 
     return False
@@ -448,9 +411,7 @@ def check_dependabot_enabled(gh: github_interface, repo_url: str) -> bool | str:
     elif "404" in str(dependabot_response):
         return True
     else:
-        return (
-            f"Error: An error has occured when accessing the API. {dependabot_response}"
-        )
+        return f"Error: An error has occured when accessing the API. {dependabot_response}"
 
 
 # Uses the above checks to get the repository data
@@ -479,9 +440,7 @@ def get_repository_data(gh: github_interface, org: str) -> list[dict] | str:
                 last_page = 1
 
             for i in range(0, last_page):
-                repos_response = gh.get(
-                    f"/orgs/{org}/repos", {"per_page": 100, "page": i + 1}
-                )
+                repos_response = gh.get(f"/orgs/{org}/repos", {"per_page": 100, "page": i + 1})
 
                 if repos_response.status_code == 200:
                     repos = repos_response.json()
@@ -496,9 +455,7 @@ def get_repository_data(gh: github_interface, org: str) -> list[dict] | str:
                                 "unprotected_branches": check_branch_protection(
                                     repo["branches_url"].replace("{/branch}", ""), gh
                                 ),
-                                "unsigned_commits": check_signed_commits(
-                                    repo["commits_url"].replace("{/sha}", ""), gh
-                                ),
+                                "unsigned_commits": check_signed_commits(repo["commits_url"].replace("{/sha}", ""), gh),
                                 "readme_missing": check_file_exists(
                                     repo["contents_url"],
                                     gh,
@@ -512,26 +469,16 @@ def get_repository_data(gh: github_interface, org: str) -> list[dict] | str:
                                 "license_missing": check_file_exists(
                                     repo["contents_url"], gh, ["LICENSE.md", "LICENSE"]
                                 ),
-                                "pirr_missing": check_file_exists(
-                                    repo["contents_url"], gh, ["PIRR.md"]
-                                ),
-                                "gitignore_missing": check_file_exists(
-                                    repo["contents_url"], gh, [".gitignore"]
-                                ),
+                                "pirr_missing": check_file_exists(repo["contents_url"], gh, ["PIRR.md"]),
+                                "gitignore_missing": check_file_exists(repo["contents_url"], gh, [".gitignore"]),
                                 "external_pr": check_external_pr(
                                     repo["pulls_url"].replace("{/number}", ""),
                                     repo["full_name"],
                                     gh,
                                 ),
-                                "breaks_naming_convention": check_breaks_naming(
-                                    repo["name"]
-                                ),
-                                "secret_scanning_disabled": check_secret_scanning_enabled(
-                                    repo
-                                ),
-                                "dependabot_disabled": check_dependabot_enabled(
-                                    gh, repo["url"]
-                                ),
+                                "breaks_naming_convention": check_breaks_naming(repo["name"]),
+                                "secret_scanning_disabled": check_secret_scanning_enabled(repo),
+                                "dependabot_disabled": check_dependabot_enabled(gh, repo["url"]),
                             },
                         }
 

@@ -22,7 +22,7 @@ format:  ## Format the code.
 .PHONY: black
 black:
 	poetry run black src
-	poetry run black awws_lambda
+	poetry run black aws_lambda
 
 
 .PHONY: ruff

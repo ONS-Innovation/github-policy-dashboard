@@ -1,15 +1,14 @@
-import boto3.resources
-import boto3.resources.factory
-import boto3.session
-import streamlit as st
-import plotly.express as px
-import pandas as pd
-
-import os
 import json
+import os
 from datetime import datetime
 
 import boto3
+import boto3.resources
+import boto3.resources.factory
+import boto3.session
+import pandas as pd
+import plotly.express as px
+import streamlit as st
 from botocore.exceptions import ClientError
 
 account = os.getenv("AWS_ACCOUNT_NAME")
@@ -31,13 +30,13 @@ def get_s3_client() -> boto3.client:
 
 
 def get_table_from_s3(s3, bucket_name: str, object_name: str) -> pd.DataFrame | str:
-    """
-    Gets a JSON file from an S3 bucket and returns it as a Pandas DataFrame.
+    """Gets a JSON file from an S3 bucket and returns it as a Pandas DataFrame.
 
     Args:
         s3: A boto3 S3 client.
         bucket_name: The name of the S3 bucket.
         object_name: The name of the object in the S3 bucket.
+
     Returns:
         A Pandas DataFrame containing the data from the JSON file.
         or
@@ -55,15 +54,13 @@ def get_table_from_s3(s3, bucket_name: str, object_name: str) -> pd.DataFrame | 
 
 @st.cache_data
 def load_data(load_date: datetime.date):
-    """
-    Loads the data from the S3 bucket and returns it as a Pandas DataFrame.
+    """Loads the data from the S3 bucket and returns it as a Pandas DataFrame.
 
     This function is cached using Streamlit's @st.cache_data decorator.
 
     Args:
         load_date (date): The date and time the data was loaded.
     """
-
     s3 = get_s3_client()
 
     df_repositories = get_table_from_s3(s3, bucket_name, "repositories.json")
@@ -85,7 +82,7 @@ def load_file(filename: str) -> dict:
     Returns:
         dict: The JSON file loaded as a dictionary.
     """
-    with open(filename, "r") as f:
+    with open(filename) as f:
         file_json = json.load(f)
 
     return file_json
@@ -169,9 +166,7 @@ with repository_tab:
                 if rule["is_policy_rule"]:
                     st.session_state["selected_rules"].append(rule["name"])
 
-    selected_rules = st.multiselect(
-        "Select rules", rules, st.session_state["selected_rules"]
-    )
+    selected_rules = st.multiselect("Select rules", rules, st.session_state["selected_rules"])
 
     repository_type = st.selectbox(
         "Repository Type",
@@ -192,34 +187,22 @@ with repository_tab:
 
         # Filter the DataFrame by the selected repository type
         if repository_type != "all":
-            df_repositories = df_repositories.loc[
-                df_repositories["repository_type"] == repository_type
-            ]
+            df_repositories = df_repositories.loc[df_repositories["repository_type"] == repository_type]
 
         # Create a new column to check if the repository is compliant or not
         # If any check is True, the repository is non-compliant
-        df_repositories["is_compliant"] = df_repositories.any(
-            axis="columns", bool_only=True
-        )
-        df_repositories["is_compliant"] = df_repositories["is_compliant"].apply(
-            lambda x: not x
-        )
+        df_repositories["is_compliant"] = df_repositories.any(axis="columns", bool_only=True)
+        df_repositories["is_compliant"] = df_repositories["is_compliant"].apply(lambda x: not x)
 
         # Create a new column to count the number of rules broken
-        df_repositories["rules_broken"] = df_repositories[selected_rules].sum(
-            axis="columns"
-        )
+        df_repositories["rules_broken"] = df_repositories[selected_rules].sum(axis="columns")
 
         # Sort the DataFrame by the number of rules broken and the repository name
-        df_repositories = df_repositories.sort_values(
-            by=["rules_broken", "repository"], ascending=[False, True]
-        )
+        df_repositories = df_repositories.sort_values(by=["rules_broken", "repository"], ascending=[False, True])
 
         # Rename the columns of the DataFrame
         df_repositories.columns = (
-            ["Repository", "Repository Type", "URL"]
-            + selected_rules
-            + ["Is Compliant", "Rules Broken"]
+            ["Repository", "Repository Type", "URL"] + selected_rules + ["Is Compliant", "Rules Broken"]
         )
 
         st.subheader(":blue-background[Repository Compliance]")
@@ -239,9 +222,7 @@ with repository_tab:
             st.subheader("Rule Descriptions")
 
             for rule in rulemap:
-                st.write(
-                    f"- {rule['name'].replace('_', ' ').title()}: {rule['description']}"
-                )
+                st.write(f"- {rule['name'].replace('_', ' ').title()}: {rule['description']}")
 
             st.caption(
                 "**Note:** All rules are interpreted from ONS' [GitHub Usage Policy](https://officenationalstatistics.sharepoint.com/sites/ONS_DDaT_Communities/Software%20Engineering%20Policies/Forms/AllItems.aspx?id=%2Fsites%2FONS%5FDDaT%5FCommunities%2FSoftware%20Engineering%20Policies%2FSoftware%20Engineering%20Policies%2FApproved%2FPDF%2FGitHub%20Usage%20Policy%2Epdf&parent=%2Fsites%2FONS%5FDDaT%5FCommunities%2FSoftware%20Engineering%20Policies%2FSoftware%20Engineering%20Policies%2FApproved%2FPDF)."
@@ -262,9 +243,7 @@ with repository_tab:
 
         # Create a pie chart to show the compliance of the repositories
         with col1:
-            fig = px.pie(
-                df_compliance, values="Number of Repositories", names="Compliance"
-            )
+            fig = px.pie(df_compliance, values="Number of Repositories", names="Compliance")
 
             st.plotly_chart(fig)
 
@@ -348,9 +327,7 @@ with slo_tab:
     df_secret_scanning.columns = ["Repository Name", "Type", "Secret", "Link"]
 
     # Group the DataFrame by the repository name and the type
-    df_secret_scanning_grouped = (
-        df_secret_scanning.groupby(["Repository Name", "Type"]).count().reset_index()
-    )
+    df_secret_scanning_grouped = df_secret_scanning.groupby(["Repository Name", "Type"]).count().reset_index()
 
     # Rename the columns of the grouped DataFrame
     df_secret_scanning_grouped.columns = [
@@ -364,9 +341,7 @@ with slo_tab:
 
     with col1:
         selected_secret = st.dataframe(
-            df_secret_scanning_grouped[
-                ["Repository Name", "Type", "Number of Secrets"]
-            ],
+            df_secret_scanning_grouped[["Repository Name", "Type", "Number of Secrets"]],
             use_container_width=True,
             on_select="rerun",
             selection_mode=["single-row"],
@@ -382,20 +357,13 @@ with slo_tab:
 
         selected_secret = df_secret_scanning_grouped.iloc[selected_secret]
 
-        st.subheader(
-            f":blue-background[{selected_secret['Repository Name']} ({selected_secret['Type']})]"
-        )
+        st.subheader(f":blue-background[{selected_secret['Repository Name']} ({selected_secret['Type']})]")
 
         st.dataframe(
-            df_secret_scanning.loc[
-                df_secret_scanning["Repository Name"]
-                == selected_secret["Repository Name"]
-            ],
+            df_secret_scanning.loc[df_secret_scanning["Repository Name"] == selected_secret["Repository Name"]],
             use_container_width=True,
             hide_index=True,
-            column_config={
-                "Link": st.column_config.LinkColumn("Link", display_text="Go to Alert")
-            },
+            column_config={"Link": st.column_config.LinkColumn("Link", display_text="Go to Alert")},
         )
     else:
         st.caption("Select a repository for more information.")
@@ -403,9 +371,7 @@ with slo_tab:
     st.divider()
 
     st.subheader(":blue-background[Dependabot Alerts]")
-    st.write(
-        "Alerts open for more than 5 days (Critical), 15 days (High), 60 days (Medium), 90 days (Low)."
-    )
+    st.write("Alerts open for more than 5 days (Critical), 15 days (High), 60 days (Medium), 90 days (Low).")
 
     # Rename the columns of the DataFrame
     df_dependabot.columns = [
@@ -430,16 +396,13 @@ with slo_tab:
         ["all", "public", "private", "internal"],
         key="dependabot_repo_type",
     )
-    minimum_days = st.slider(
-        "Minimum Days Open", 0, df_dependabot["Days Open"].max(), 0
-    )
+    minimum_days = st.slider("Minimum Days Open", 0, df_dependabot["Days Open"].max(), 0)
 
     # If any severity levels are selected, populate the rest of the dashboard
     if len(severity) > 0:
         # Filter the DataFrame by the selected severity levels and the minimum days open
         df_dependabot = df_dependabot.loc[
-            df_dependabot["Severity"].isin(severity)
-            & (df_dependabot["Days Open"] >= minimum_days)
+            df_dependabot["Severity"].isin(severity) & (df_dependabot["Days Open"] >= minimum_days)
         ]
 
         # Filter the DataFrame by the selected repository type
@@ -459,9 +422,9 @@ with slo_tab:
         )
 
         # Create a new column to map the severity weight to a severity level for the grouped data
-        df_dependabot_grouped["Severity"] = df_dependabot_grouped[
-            "Severity Weight"
-        ].map({4: "Critical", 3: "High", 2: "Medium", 1: "Low"})
+        df_dependabot_grouped["Severity"] = df_dependabot_grouped["Severity Weight"].map(
+            {4: "Critical", 3: "High", 2: "Medium", 1: "Low"}
+        )
 
         # Rename the columns of the grouped DataFrame
         df_dependabot_grouped.columns = [
@@ -485,9 +448,7 @@ with slo_tab:
         with col1:
             # Create a dataframe summarising the alerts by severity
             df_dependabot_severity_grouped = (
-                df_dependabot.groupby("Severity")
-                .count()
-                .reset_index()[["Severity", "Repository Name"]]
+                df_dependabot.groupby("Severity").count().reset_index()[["Severity", "Repository Name"]]
             )
             df_dependabot_severity_grouped.columns = ["Severity", "Number of Alerts"]
 
@@ -539,15 +500,11 @@ with slo_tab:
 
             selected_repo = df_dependabot_grouped.iloc[selected_repo]
 
-            st.subheader(
-                f":blue-background[{selected_repo['Repository Name']} ({selected_repo['Type']})]"
-            )
+            st.subheader(f":blue-background[{selected_repo['Repository Name']} ({selected_repo['Type']})]")
 
             st.dataframe(
                 # Get the alerts for the selected repository, sort by severity weight and days open and display the columns
-                df_dependabot.loc[
-                    df_dependabot["Repository Name"] == selected_repo["Repository Name"]
-                ].sort_values(
+                df_dependabot.loc[df_dependabot["Repository Name"] == selected_repo["Repository Name"]].sort_values(
                     by=["Severity Weight", "Days Open"], ascending=[False, False]
                 )[
                     [
@@ -561,11 +518,7 @@ with slo_tab:
                 ],
                 use_container_width=True,
                 hide_index=True,
-                column_config={
-                    "Link": st.column_config.LinkColumn(
-                        "Link", display_text="Go to Alert"
-                    )
-                },
+                column_config={"Link": st.column_config.LinkColumn("Link", display_text="Go to Alert")},
             )
 
         else:
