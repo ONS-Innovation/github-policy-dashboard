@@ -2,7 +2,7 @@ import datetime
 from dateutil.relativedelta import relativedelta
 from requests import Response
 
-from github_api_toolkit import github_interface
+from github_api_toolkit import github_interface, github_graphql_interface
 
 # Dependabot Alert Thresholds (Days)
 critical_threshold = 5
@@ -377,8 +377,35 @@ def check_dependabot_enabled(gh: github_interface, repo_url: str) -> bool | str:
     else:
         return f"Error: An error has occured when accessing the API. {dependabot_response}"
 
+def check_point_of_contact(ql: github_graphql_interface, repo_name: str, org: str, codeowners_missing: bool) -> bool:
+    """Checks if a point of contact is defined for a given repository.
+
+    Args:
+        ql (github_graphql_interface): An instance of the github_graphql_interface class to make calls to the GitHub GraphQL API.
+        repo_name (str): The name of the repository to check.
+        org (str): The name of the organisation.
+        codeowners_exists (bool): True if a CODEOWNERS file doesn't exist in the repository.
+
+    Returns:
+        bool: True if point of contact is missing, False if defined.
+    """
+
+    # If CODEOWNERS file is missing, then point of contact is missing
+    # Therefore we don't need to call the GraphQL API
+    # Saving run time and resources
+    if codeowners_missing:
+        return True
+
+    main_branch = ql.get_repository_email_list(org, repo_name, branch="main")
+    master_branch = ql.get_repository_email_list(org, repo_name, branch="master")
+
+    if main_branch or master_branch:
+        return False
+    else:
+        return True
+
 # Uses the above checks to get the repository data
-def get_repository_data(gh: github_interface, org: str) -> list[dict] | str:
+def get_repository_data(gh: github_interface, ql: github_graphql_interface, org: str) -> list[dict] | str:
     """
     Gets all the repositories in the organisation and runs the policy checks on them.
 
@@ -409,6 +436,8 @@ def get_repository_data(gh: github_interface, org: str) -> list[dict] | str:
                     repos = repos_response.json()
 
                     for repo in repos:
+                        codeowners_missing = check_file_exists(repo["contents_url"], gh, [".github/CODEOWNERS", "CODEOWNERS", "docs/CODEOWNERS"])
+
                         repo_info = {
                             "name": repo["name"],
                             "type": repo["visibility"],
@@ -424,7 +453,9 @@ def get_repository_data(gh: github_interface, org: str) -> list[dict] | str:
                                 "external_pr": check_external_pr(repo["pulls_url"].replace("{/number}", ""), repo["full_name"], gh),
                                 "breaks_naming_convention": check_breaks_naming(repo["name"]),
                                 "secret_scanning_disabled": check_secret_scanning_enabled(repo),
-                                "dependabot_disabled": check_dependabot_enabled(gh, repo["url"])
+                                "dependabot_disabled": check_dependabot_enabled(gh, repo["url"]),
+                                "codeowners_missing": codeowners_missing,
+                                "point_of_contact_missing": check_point_of_contact(ql, repo["name"], org, codeowners_missing)
                             }
                         }
 

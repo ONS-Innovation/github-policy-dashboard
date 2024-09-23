@@ -64,5 +64,17 @@
         "description": "The repository does not have dependabot enabled.",
         "is_security_rule": true,
         "is_policy_rule": true
+    },
+    {
+        "name": "codeowners_misssing",
+        "description": "The repository does not have a CODEOWNERS file.",
+        "is_security_rule": false,
+        "is_policy_rule": true
+    },
+    {
+        "name": "point_of_contact_missing",
+        "description": "A contact email address cannot be found from the CODEOWNERS file.",
+        "is_security_rule": true,
+        "is_policy_rule": true
     }
 ]
