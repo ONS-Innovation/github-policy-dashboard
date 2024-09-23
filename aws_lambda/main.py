@@ -40,6 +40,7 @@ logger = logging.getLogger()
 #     "records_added": 10
 # }
 
+
 def handler(event, context):
 
     # Create a boto3 session
@@ -64,9 +65,7 @@ def handler(event, context):
     else:
         logger.info(
             "Got GitHub Access Token using AWS Secret",
-            extra = {
-                "secret_address": secret_name
-            }
+            extra={"secret_address": secret_name},
         )
 
     gh = github_api_toolkit.github_interface(token[0])
@@ -76,53 +75,53 @@ def handler(event, context):
 
     repos = policy_checks.get_repository_data(gh, ql, org)
 
-    logger.info(
-        "Repository Data Retrieved",
-        extra= {
-            "records_added": len(repos)
-        }
-    )
+    logger.info("Repository Data Retrieved", extra={"records_added": len(repos)})
 
     secret_scanning_alerts = policy_checks.get_security_alerts(gh, org, 5, "secret_scanning")
 
     logger.info(
         "Secret Scanning Alerts Retrieved",
-        extra= {
-            "records_added": len(secret_scanning_alerts)
-        }
+        extra={"records_added": len(secret_scanning_alerts)},
     )
 
     dependabot_alerts = policy_checks.get_all_dependabot_alerts(gh, org)
 
-    logger.info(
-        "Dependabot Alerts Retrieved",
-        extra= {
-            "records_added": len(dependabot_alerts)
-        }
-    )
+    logger.info("Dependabot Alerts Retrieved", extra={"records_added": len(dependabot_alerts)})
 
-    s3 = session.client('s3')
+    s3 = session.client("s3")
 
     logger.info("S3 Client Created")
 
-    s3.put_object(Bucket=bucket_name, Key="repositories.json", Body=json.dumps(repos, indent=4).encode("utf-8"))
+    s3.put_object(
+        Bucket=bucket_name,
+        Key="repositories.json",
+        Body=json.dumps(repos, indent=4).encode("utf-8"),
+    )
 
     logger.info("Uploaded Repositories JSON to S3")
 
-    s3.put_object(Bucket=bucket_name, Key="secret_scanning.json", Body=json.dumps(secret_scanning_alerts, indent=4).encode("utf-8"))
+    s3.put_object(
+        Bucket=bucket_name,
+        Key="secret_scanning.json",
+        Body=json.dumps(secret_scanning_alerts, indent=4).encode("utf-8"),
+    )
 
     logger.info("Uploaded Secret Scanning JSON to S3")
 
-    s3.put_object(Bucket=bucket_name, Key="dependabot.json", Body=json.dumps(dependabot_alerts, indent=4).encode("utf-8"))
+    s3.put_object(
+        Bucket=bucket_name,
+        Key="dependabot.json",
+        Body=json.dumps(dependabot_alerts, indent=4).encode("utf-8"),
+    )
 
     logger.info("Uploaded Dependabot JSON to S3")
 
     logger.info(
         "Process Complete",
-        extra = {
+        extra={
             "bucket": bucket_name,
             "no_repos": len(repos),
             "no_secret_alerts": len(secret_scanning_alerts),
-            "no_dependabot_alerts": len(dependabot_alerts)
-        }
+            "no_dependabot_alerts": len(dependabot_alerts),
+        },
     )
