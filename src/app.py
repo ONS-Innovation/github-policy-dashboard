@@ -97,7 +97,6 @@ loading_date = loading_date.strftime("%Y-%m-%d %H:%M")
 loading_date = loading_date[:-1] + "0"
 
 df_repositories, df_secret_scanning, df_dependabot = load_data(loading_date)
-
 rulemap = load_file("rulemap.json")
 
 if type(df_repositories) == str:
@@ -137,7 +136,6 @@ with repository_tab:
 
     # Renames the columns of the DataFrame
     df_repositories.columns = ["repository", "repository_type", "url"] + rules
-
     # Uses streamlit's session state to store the selected rules
     # This is so that selected rules persist with other inputs (i.e the preset buttons)
     if "selected_rules" not in st.session_state:
@@ -173,13 +171,23 @@ with repository_tab:
         ["all", "public", "private", "internal"],
         key="repos_repo_type",
     )
+    # Date input for filtering repositories
+    col1, col2 = st.columns(2)
+    with col1:
+        start_date = st.date_input("Start Date", datetime.now().date() - pd.DateOffset(years=1), key="start_date_repo")
+    with col2:
+        end_date = st.date_input("End Date", datetime.now().date(), key="end_date_repo")
+
+    if end_date < start_date:
+        st.error("End date cannot be before start date.")
+        st.stop()
 
     # If any rules are selected, populate the rest of the dashboard
     if len(selected_rules) != 0:
         rules_to_exclude = []
 
         for rule in rules:
-            if rule not in selected_rules:
+            if rule not in selected_rules and "created_at" not in rule:
                 rules_to_exclude.append(rule)
 
         # Remove the columns for rules that aren't selected
@@ -188,6 +196,16 @@ with repository_tab:
         # Filter the DataFrame by the selected repository type
         if repository_type != "all":
             df_repositories = df_repositories.loc[df_repositories["repository_type"] == repository_type]
+
+        # Filter the DataFrame by the selected date range
+        df_repositories["created_at"] = pd.to_datetime(df_repositories["created_at"], errors="coerce").dt.tz_localize(
+            None
+        )
+        df_repositories = df_repositories.dropna(subset=["created_at"])
+        df_repositories = df_repositories.loc[
+            (df_repositories["created_at"] >= pd.to_datetime(start_date))
+            & (df_repositories["created_at"] <= pd.to_datetime(end_date))
+        ]
 
         # Create a new column to check if the repository is compliant or not
         # If any check is True, the repository is non-compliant
@@ -202,31 +220,38 @@ with repository_tab:
 
         # Rename the columns of the DataFrame
         df_repositories.columns = (
-            ["Repository", "Repository Type", "URL"] + selected_rules + ["Is Compliant", "Rules Broken"]
+            ["Repository", "Repository Type", "URL", "Created At"] + selected_rules + ["Is Compliant", "Rules Broken"]
         )
 
         st.subheader(":blue-background[Repository Compliance]")
 
+        # If there are no repositories within the selected time range, display an error message
+        if df_repositories.empty:
+            st.error("Nothing within that time range.")
+            st.stop()
+
         # Display the rules that are being checked
         st.write("Checking for the following rules:")
-
         col1, col2 = st.columns(2)
 
-        for i in range(0, len(selected_rules)):
-            if i % 2 == 0:
-                col1.write(f"- {selected_rules[i].replace('_', ' ').title()}")
-            else:
-                col2.write(f"- {selected_rules[i].replace('_', ' ').title()}")
+        with col1:
+            with st.expander("See Selected Rules"):
+                col1a, col1b = st.columns(2)
+                for i in range(0, len(selected_rules)):
+                    if i % 2 == 0:
+                        col1a.write(f"- {selected_rules[i].replace('_', ' ').title()}")
+                    else:
+                        col1b.write(f"- {selected_rules[i].replace('_', ' ').title()}")
 
-        with st.expander("See Rule Descriptions"):
-            st.subheader("Rule Descriptions")
+        with col2:
+            with st.expander("See Rule Descriptions"):
+                st.subheader("Rule Descriptions")
+                for rule in rulemap:
+                    st.write(f"- {rule['name'].replace('_', ' ').title()}: {rule['description']}")
 
-            for rule in rulemap:
-                st.write(f"- {rule['name'].replace('_', ' ').title()}: {rule['description']}")
-
-            st.caption(
-                "**Note:** All rules are interpreted from ONS' [GitHub Usage Policy](https://officenationalstatistics.sharepoint.com/sites/ONS_DDaT_Communities/Software%20Engineering%20Policies/Forms/AllItems.aspx?id=%2Fsites%2FONS%5FDDaT%5FCommunities%2FSoftware%20Engineering%20Policies%2FSoftware%20Engineering%20Policies%2FApproved%2FPDF%2FGitHub%20Usage%20Policy%2Epdf&parent=%2Fsites%2FONS%5FDDaT%5FCommunities%2FSoftware%20Engineering%20Policies%2FSoftware%20Engineering%20Policies%2FApproved%2FPDF)."
-            )
+                st.caption(
+                    "**Note:** All rules are interpreted from ONS' [GitHub Usage Policy](https://officenationalstatistics.sharepoint.com/sites/ONS%5FDDaT%5FCommunities/Software%20Engineering%20Policies/Forms/AllItems.aspx?id=%2Fsites%2FONS%5FDDaT%5FCommunities%2FSoftware%20Engineering%20Policies%2FSoftware%20Engineering%20Policies%2FApproved%2FPDF%2FGitHub%20Usage%20Policy%2Epdf&parent=%2Fsites%2FONS%5FDDaT%5FCommunities%2FSoftware%20Engineering%20Policies%2FSoftware%20Engineering%20Policies%2FApproved%2FPDF)."
+                )
 
         st.divider()
 
@@ -265,9 +290,15 @@ with repository_tab:
 
             st.metric("Compliant Repositories", compliant_repositories)
             st.metric("Non-Compliant Repositories", noncompliant_repositories)
+            avg_rules_broken = df_repositories["Rules Broken"].mean()
+            if pd.notna(avg_rules_broken):
+                avg_rules_broken = int(avg_rules_broken.round(0))
+            else:
+                avg_rules_broken = 0
+
             st.metric(
                 "Average Rules Broken",
-                int(df_repositories["Rules Broken"].mean().round(0)),
+                avg_rules_broken,
             )
 
             rule_frequency = df_repositories[selected_rules].sum()
@@ -295,7 +326,7 @@ with repository_tab:
 
             selected_repo = df_repositories.iloc[selected_repo]
 
-            failed_checks = selected_repo[3:-2].loc[selected_repo[3:-2] == 1]
+            failed_checks = selected_repo[4:-2].loc[selected_repo[4:-2] == 1]
 
             col1, col2 = st.columns([0.8, 0.2])
 
@@ -323,8 +354,38 @@ with slo_tab:
     st.subheader(":blue-background[Secret Scanning Alerts]")
     st.write("Alerts open for more than 5 days.")
 
+    col1, col2 = st.columns(2)
+    with col1:
+        start_date_slo = st.date_input(
+            "Start Date", datetime.now().date() - pd.DateOffset(years=1), key="start_date_slo"
+        )
+    with col2:
+        end_date_slo = st.date_input("End Date", datetime.now().date(), key="end_date_slo")
+
+    if end_date_slo < start_date_slo:
+        st.error("End date cannot be before start date.")
+        st.stop()
+
+    # Filter the secret scanning alerts by the selected date range
+    df_secret_scanning["created_at"] = pd.to_datetime(df_secret_scanning["created_at"], errors="coerce").dt.tz_localize(
+        None
+    )
+    df_secret_scanning = df_secret_scanning.dropna(subset=["created_at"])
+    df_secret_scanning = df_secret_scanning.loc[
+        (df_secret_scanning["created_at"] >= pd.to_datetime(start_date_slo))
+        & (df_secret_scanning["created_at"] <= pd.to_datetime(end_date_slo))
+    ]
+
+    # Filter the dependabot alerts by the selected date range
+    df_dependabot["created_at"] = pd.to_datetime(df_dependabot["created_at"], errors="coerce").dt.tz_localize(None)
+    df_dependabot = df_dependabot.dropna(subset=["created_at"])
+    df_dependabot = df_dependabot.loc[
+        (df_dependabot["created_at"] >= pd.to_datetime(start_date_slo))
+        & (df_dependabot["created_at"] <= pd.to_datetime(end_date_slo))
+    ]
+
     # Rename the columns of the DataFrame
-    df_secret_scanning.columns = ["Repository Name", "Type", "Secret", "Link"]
+    df_secret_scanning.columns = ["Repository Name", "Type", "Created At", "Secret", "Link"]
 
     # Group the DataFrame by the repository name and the type
     df_secret_scanning_grouped = df_secret_scanning.groupby(["Repository Name", "Type"]).count().reset_index()
@@ -333,6 +394,7 @@ with slo_tab:
     df_secret_scanning_grouped.columns = [
         "Repository Name",
         "Type",
+        "Created At",
         "Number of Secrets",
         "Link",
     ]
@@ -371,18 +433,23 @@ with slo_tab:
     st.divider()
 
     st.subheader(":blue-background[Dependabot Alerts]")
-    st.write("Alerts open for more than 5 days (Critical), 15 days (High), 60 days (Medium), 90 days (Low).")
-
     # Rename the columns of the DataFrame
     df_dependabot.columns = [
         "Repository Name",
         "Type",
+        "Created At",
         "Dependency",
         "Advisory",
         "Severity",
         "Days Open",
         "Link",
     ]
+    max_days_open = int(df_dependabot["Days Open"].max()) if not df_dependabot["Days Open"].empty else 0
+
+    if max_days_open == 0:
+        st.error("There are no alerts within the selected date range.")
+        st.stop()
+    st.write("Alerts open for more than 5 days (Critical), 15 days (High), 60 days (Medium), 90 days (Low).")
 
     col1, col2 = st.columns([0.7, 0.3])
 
@@ -396,7 +463,8 @@ with slo_tab:
         ["all", "public", "private", "internal"],
         key="dependabot_repo_type",
     )
-    minimum_days = st.slider("Minimum Days Open", 0, df_dependabot["Days Open"].max(), 0)
+
+    minimum_days = st.slider("Minimum Days Open", 0, max_days_open, 0)
 
     # If any severity levels are selected, populate the rest of the dashboard
     if len(severity) > 0:
