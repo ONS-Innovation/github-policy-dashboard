@@ -174,7 +174,7 @@ with repository_tab:
     # Date input for filtering repositories
     col1, col2 = st.columns(2)
     with col1:
-        start_date = st.date_input("Start Date", datetime.now().date() - pd.DateOffset(years=1), key="start_date_repo")
+        start_date = st.date_input("Start Date", pd.to_datetime(df_repositories["created_at"][0]), key="start_date_repo")
     with col2:
         end_date = st.date_input("End Date", datetime.now().date(), key="end_date_repo")
 
@@ -201,7 +201,6 @@ with repository_tab:
         df_repositories["created_at"] = pd.to_datetime(df_repositories["created_at"], errors="coerce").dt.tz_localize(
             None
         )
-        df_repositories = df_repositories.dropna(subset=["created_at"])
         df_repositories = df_repositories.loc[
             (df_repositories["created_at"] >= pd.to_datetime(start_date))
             & (df_repositories["created_at"] <= pd.to_datetime(end_date))
@@ -370,7 +369,6 @@ with slo_tab:
     df_secret_scanning["created_at"] = pd.to_datetime(df_secret_scanning["created_at"], errors="coerce").dt.tz_localize(
         None
     )
-    df_secret_scanning = df_secret_scanning.dropna(subset=["created_at"])
     df_secret_scanning = df_secret_scanning.loc[
         (df_secret_scanning["created_at"] >= pd.to_datetime(start_date_slo))
         & (df_secret_scanning["created_at"] <= pd.to_datetime(end_date_slo))
@@ -378,7 +376,6 @@ with slo_tab:
 
     # Filter the dependabot alerts by the selected date range
     df_dependabot["created_at"] = pd.to_datetime(df_dependabot["created_at"], errors="coerce").dt.tz_localize(None)
-    df_dependabot = df_dependabot.dropna(subset=["created_at"])
     df_dependabot = df_dependabot.loc[
         (df_dependabot["created_at"] >= pd.to_datetime(start_date_slo))
         & (df_dependabot["created_at"] <= pd.to_datetime(end_date_slo))
@@ -444,7 +441,7 @@ with slo_tab:
         "Days Open",
         "Link",
     ]
-    max_days_open = int(df_dependabot["Days Open"].max()) if not df_dependabot["Days Open"].empty else 0
+    max_days_open = 0 if df_dependabot["Days Open"].empty else int(df_dependabot["Days Open"].max())
 
     if max_days_open == 0:
         st.error("There are no alerts within the selected date range.")
