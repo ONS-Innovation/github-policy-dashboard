@@ -171,6 +171,7 @@ with repository_tab:
         ["all", "public", "private", "internal"],
         key="repos_repo_type",
     )
+
     # Date input for filtering repositories
     col1, col2 = st.columns(2)
     with col1:
@@ -231,26 +232,23 @@ with repository_tab:
 
         # Display the rules that are being checked
         st.write("Checking for the following rules:")
-        col1, col2 = st.columns(2)
 
-        with col1:
-            with st.expander("See Selected Rules"):
-                col1a, col1b = st.columns(2)
-                for i in range(0, len(selected_rules)):
-                    if i % 2 == 0:
-                        col1a.write(f"- {selected_rules[i].replace('_', ' ').title()}")
-                    else:
-                        col1b.write(f"- {selected_rules[i].replace('_', ' ').title()}")
+        with st.expander("See Selected Rules"):
+            col1a, col1b = st.columns(2)
+            for i in range(0, len(selected_rules)):
+                if i % 2 == 0:
+                    col1a.write(f"- {selected_rules[i].replace('_', ' ').title()}")
+                else:
+                    col1b.write(f"- {selected_rules[i].replace('_', ' ').title()}")
 
-        with col2:
-            with st.expander("See Rule Descriptions"):
-                st.subheader("Rule Descriptions")
-                for rule in rulemap:
-                    st.write(f"- {rule['name'].replace('_', ' ').title()}: {rule['description']}")
+        with st.expander("See Rule Descriptions"):
+            st.subheader("Rule Descriptions")
+            for rule in rulemap:
+                st.write(f"- {rule['name'].replace('_', ' ').title()}: {rule['description']}")
 
-                st.caption(
-                    "**Note:** All rules are interpreted from ONS' [GitHub Usage Policy](https://officenationalstatistics.sharepoint.com/sites/ONS%5FDDaT%5FCommunities/Software%20Engineering%20Policies/Forms/AllItems.aspx?id=%2Fsites%2FONS%5FDDaT%5FCommunities%2FSoftware%20Engineering%20Policies%2FSoftware%20Engineering%20Policies%2FApproved%2FPDF%2FGitHub%20Usage%20Policy%2Epdf&parent=%2Fsites%2FONS%5FDDaT%5FCommunities%2FSoftware%20Engineering%20Policies%2FSoftware%20Engineering%20Policies%2FApproved%2FPDF)."
-                )
+            st.caption(
+                "**Note:** All rules are interpreted from ONS' [GitHub Usage Policy](https://officenationalstatistics.sharepoint.com/sites/ONS%5FDDaT%5FCommunities/Software%20Engineering%20Policies/Forms/AllItems.aspx?id=%2Fsites%2FONS%5FDDaT%5FCommunities%2FSoftware%20Engineering%20Policies%2FSoftware%20Engineering%20Policies%2FApproved%2FPDF%2FGitHub%20Usage%20Policy%2Epdf&parent=%2Fsites%2FONS%5FDDaT%5FCommunities%2FSoftware%20Engineering%20Policies%2FSoftware%20Engineering%20Policies%2FApproved%2FPDF)."
+            )
 
         st.divider()
 
