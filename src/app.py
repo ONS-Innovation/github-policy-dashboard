@@ -231,9 +231,10 @@ with repository_tab:
             st.stop()
 
         # Display the rules that are being checked
-        st.write("Checking for the following rules:")
 
         with st.expander("See Selected Rules"):
+            st.write("Checking for the following rules:")
+
             col1a, col1b = st.columns(2)
             for i in range(0, len(selected_rules)):
                 if i % 2 == 0:
