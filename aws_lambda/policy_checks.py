@@ -95,6 +95,7 @@ def get_security_alerts(
                                 formatted_alert = {
                                     "repo": alert["repository"]["name"],
                                     "type": gh.get(alert["repository"]["url"], {}, False).json()["visibility"],
+                                    "created_at": alert["created_at"],
                                     "dependency": alert["dependency"]["package"]["name"],
                                     "advisory": alert["security_advisory"]["summary"],
                                     "severity": alert["security_advisory"]["severity"],
@@ -105,6 +106,7 @@ def get_security_alerts(
                                 formatted_alert = {
                                     "repo": alert["repository"]["name"],
                                     "type": gh.get(alert["repository"]["url"], {}, False).json()["visibility"],
+                                    "created_at": alert["created_at"],
                                     "secret": f"{alert["secret_type_display_name"]} - {alert["secret"]}",
                                     "link": alert["html_url"],
                                 }
@@ -478,6 +480,7 @@ def get_repository_data(gh: github_interface, ql: github_graphql_interface, org:
                             "name": repo["name"],
                             "type": repo["visibility"],
                             "url": repo["html_url"],
+                            "created_at": repo["created_at"],
                             "checklist": {
                                 "inactive": check_inactive(repo),
                                 "unprotected_branches": check_branch_protection(

@@ -43,6 +43,7 @@ lint:  ## Run Python linter
 	make ruff || true
 	make pylint || true
 
+
 .PHONY: mypy
 mypy:  ## Run mypy.
 	poetry run mypy src
@@ -53,6 +54,12 @@ mypy:  ## Run mypy.
 install:  ## Install the dependencies excluding dev.
 	poetry install --only main --no-root
 
+
 .PHONY: install-dev
 install-dev:  ## Install the dependencies including dev.
 	poetry install --no-root
+
+
+.PHONY: run-local
+run-local:  ## Run locally.
+	streamlit run src/app.py
