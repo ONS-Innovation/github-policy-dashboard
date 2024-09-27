@@ -66,7 +66,7 @@
         "is_policy_rule": true
     },
     {
-        "name": "codeowners_misssing",
+        "name": "codeowners_missing",
         "description": "The repository does not have a CODEOWNERS file.",
         "is_security_rule": false,
         "is_policy_rule": true

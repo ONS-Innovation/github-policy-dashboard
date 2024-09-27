@@ -264,9 +264,9 @@ def check_signed_commits(repo_api_url: str, gh: github_interface) -> bool | str:
 # PIRR.md (private or internal) and .gitignore
 
 
-def check_file_exists(repo_api_url: str, gh: github_interface, files: list[str]) -> bool | str:
+def check_file_missing(repo_api_url: str, gh: github_interface, files: list[str]) -> bool | str:
     """
-    Checks if a given filename exists in the repository.
+    Checks if a given filename is missing from a repository.
     Returns True if file is missing
 
     Args:
@@ -372,14 +372,14 @@ def check_breaks_naming(repo_name: str) -> bool | str:
     return False
 
 
-def check_secret_scanning_enabled(repo: dict) -> bool:
-    """Checks if Secret Scanning is enabled for a given repository.
+def check_secret_scanning(repo: dict) -> bool:
+    """Checks if Secret Scanning is disabled for a given repository.
 
     Args:
         repo (dict): The JSON response for the repository
 
     Returns:
-        bool: True if Secret Scanning is disabled, False if enabled.
+        bool: True if Secret Scanning is disabled (breaks policy), False if enabled.
     """
     if repo["visibility"] == "public":
         if repo["security_and_analysis"]["secret_scanning"]["status"] == "disabled":
@@ -391,15 +391,15 @@ def check_secret_scanning_enabled(repo: dict) -> bool:
         return False
 
 
-def check_dependabot_enabled(gh: github_interface, repo_url: str) -> bool | str:
-    """Checks if Dependabot is enabled for a given repository.
+def check_dependabot(gh: github_interface, repo_url: str) -> bool | str:
+    """Checks if Dependabot is disabled for a given repository.
 
     Args:
         gh (github_interface): An instance of the github_interface class to make calls to the GitHub API.
         repo_url (str): The API endpoint for the repository to check.
 
     Returns:
-        bool | str: True if Dependabot is disabled, False if enabled, or an error message.
+        bool | str: True if Dependabot is disabled (breaks policy), False if enabled, or an error message.
     """
     url = repo_url + "/vulnerability-alerts"
 
@@ -413,17 +413,17 @@ def check_dependabot_enabled(gh: github_interface, repo_url: str) -> bool | str:
     else:
         return f"Error: An error has occured when accessing the API. {dependabot_response}"
 
-def check_point_of_contact(ql: github_graphql_interface, repo_name: str, org: str, codeowners_missing: bool) -> bool:
+def point_of_contact_exists(ql: github_graphql_interface, repo_name: str, org: str, codeowners_missing: bool) -> bool:
     """Checks if a point of contact is defined for a given repository.
 
     Args:
         ql (github_graphql_interface): An instance of the github_graphql_interface class to make calls to the GitHub GraphQL API.
         repo_name (str): The name of the repository to check.
         org (str): The name of the organisation.
-        codeowners_exists (bool): True if a CODEOWNERS file doesn't exist in the repository.
+        codeowners_missing (bool): True if a CODEOWNERS file doesn't exist in the repository.
 
     Returns:
-        bool: True if point of contact is missing, False if defined.
+        bool: True if point of contact is missing (breaks policy), False if defined.
     """
 
     # If CODEOWNERS file is missing, then point of contact is missing
@@ -472,7 +472,7 @@ def get_repository_data(gh: github_interface, ql: github_graphql_interface, org:
                     repos = repos_response.json()
 
                     for repo in repos:
-                        codeowners_missing = check_file_exists(repo["contents_url"], gh, [".github/CODEOWNERS", "CODEOWNERS", "docs/CODEOWNERS"])
+                        codeowners_missing = check_file_missing(repo["contents_url"], gh, [".github/CODEOWNERS", "CODEOWNERS", "docs/CODEOWNERS"])
 
                         repo_info = {
                             "name": repo["name"],
@@ -484,7 +484,7 @@ def get_repository_data(gh: github_interface, ql: github_graphql_interface, org:
                                     repo["branches_url"].replace("{/branch}", ""), gh
                                 ),
                                 "unsigned_commits": check_signed_commits(repo["commits_url"].replace("{/sha}", ""), gh),
-                                "readme_missing": check_file_exists(
+                                "readme_missing": check_file_missing(
                                     repo["contents_url"],
                                     gh,
                                     [
@@ -494,21 +494,21 @@ def get_repository_data(gh: github_interface, ql: github_graphql_interface, org:
                                         "docs/readme.md",
                                     ],
                                 ),
-                                "license_missing": check_file_exists(
+                                "license_missing": check_file_missing(
                                     repo["contents_url"], gh, ["LICENSE.md", "LICENSE"]
                                 ),
-                                "pirr_missing": check_file_exists(repo["contents_url"], gh, ["PIRR.md"]),
-                                "gitignore_missing": check_file_exists(repo["contents_url"], gh, [".gitignore"]),
+                                "pirr_missing": check_file_missing(repo["contents_url"], gh, ["PIRR.md"]),
+                                "gitignore_missing": check_file_missing(repo["contents_url"], gh, [".gitignore"]),
                                 "external_pr": check_external_pr(
                                     repo["pulls_url"].replace("{/number}", ""),
                                     repo["full_name"],
                                     gh,
                                 ),
                                 "breaks_naming_convention": check_breaks_naming(repo["name"]),
-                                "secret_scanning_disabled": check_secret_scanning_enabled(repo),
-                                "dependabot_disabled": check_dependabot_enabled(gh, repo["url"]),
+                                "secret_scanning_disabled": check_secret_scanning(repo),
+                                "dependabot_disabled": check_dependabot(gh, repo["url"]),
                                 "codeowners_missing": codeowners_missing,
-                                "point_of_contact_missing": check_point_of_contact(ql, repo["name"], org, codeowners_missing)
+                                "point_of_contact_missing": point_of_contact_exists(ql, repo["name"], org, codeowners_missing)
                             }
                         }
 
