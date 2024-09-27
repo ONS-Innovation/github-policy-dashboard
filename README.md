@@ -7,6 +7,16 @@ This project uses poetry for package management and colima/docker for containeri
 [Instructions to install Poetry](https://python-poetry.org/docs/)
 [Instructions to install Colima](https://github.com/abiosoft/colima/blob/main/README.md)
 
+## Documentation
+
+This project uses MkDocs for documentation which gets deployed to GitHub Pages at a repository level.
+
+For more information about MkDocs, see the below documentation.
+
+[Getting Started with MkDocs](https://www.mkdocs.org/getting-started/)
+
+There is a guide to getting started on this repository's GitHub Pages site.
+
 ## Setup - Run outside of Docker
 
 Prior to running outside of Docker ensure you have the necessary environment variables setup locally where you are running the application. E.g in linux or OSX you can run the following, providing appropriate values for the variables:
@@ -300,13 +310,3 @@ To run mypy (static type checking)
 ```bash
 make mypy
 ```
-
-## Documentation
-
-This project uses MkDocs for documentation which gets deployed to GitHub Pages at a repository level.
-
-For more information about MkDocs, see the below documentation.
-
-[Getting Started with MkDocs](https://www.mkdocs.org/getting-started/)
-
-There is a guide to getting started on this repository's GitHub Pages site.
