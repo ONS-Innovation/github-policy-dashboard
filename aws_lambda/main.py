@@ -69,10 +69,11 @@ def handler(event, context):
         )
 
     gh = github_api_toolkit.github_interface(token[0])
+    ql = github_api_toolkit.github_graphql_interface(token[0])
 
     logger.info("Created API Controller")
 
-    repos = policy_checks.get_repository_data(gh, org)
+    repos = policy_checks.get_repository_data(gh, ql, org)
 
     logger.info("Repository Data Retrieved", extra={"records_added": len(repos)})
 

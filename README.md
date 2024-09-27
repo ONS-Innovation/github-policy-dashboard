@@ -66,9 +66,12 @@ docker run -p 8501:8501 \
 -e AWS_ACCESS_KEY_ID=<aws_access_key_id> \
 -e AWS_SECRET_ACCESS_KEY=<aws_secret_access_key_id> \
 -e AWS_DEFAULT_REGION=eu-west-2 \
--e AWS_ACCOUNT_NAME=sdp-sandbox
+-e AWS_ACCOUNT_NAME=sdp-sandbox \
+-e AWS_LAMBDA_FUNCTION_TIMEOUT=600
 github-audit-dashboard
 ```
+
+**Please Note:** `AWS_LAMBDA_FUNCTION_TIMEOUT` is required to extend the timeout value for the function. The default is 300 seconds which isn't long enough for ONS-Innovation or ONSDigital. If you encounter a timeout error, increase this value.
 
 4. Check the container is running
 
