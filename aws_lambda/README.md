@@ -77,9 +77,12 @@ docker run --platform linux/amd64 -p 9000:8080 \
 -e AWS_SECRET_NAME=<aws_secret_name> \
 -e GITHUB_ORG=ONS-Innovation \
 -e GITHUB_APP_CLIENT_ID=<github_app_client_id> \
--e AWS_ACCOUNT_NAME=sdp-sandbox
+-e AWS_ACCOUNT_NAME=sdp-sandbox \
+-e AWS_LAMBDA_FUNCTION_TIMEOUT=600
 github-audit-dashboard-lambda
 ```
+
+**Please Note:** `AWS_LAMBDA_FUNCTION_TIMEOUT` is required to extend the timeout value for the function. The default is 300 seconds which isn't long enough for ONS-Innovation or ONSDigital. If you encounter a timeout error, increase this value.
 
 Once the container is running, a local endpoint is created at `localhost:9000/2015-03-31/functions/function/invocations`.
 
