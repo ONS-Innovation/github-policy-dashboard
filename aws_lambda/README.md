@@ -119,7 +119,7 @@ When you make changes to the Lambda Script, a new container image must be pushed
 
 These instructions assume:
 
-1. You have a repository set up in your AWS account named copilot-usage-lambda-script.
+1. You have a repository set up in your AWS account named github-audit-dashboard-lambda.
 2. You have created an AWS IAM user with permissions to read/write to ECR (e.g AmazonEC2ContainerRegistryFullAccess policy) and that you have created the necessary access keys for this user.  The credentials for this user are stored in ~/.aws/credentials and can be used by accessing --profile <aws-credentials-profile\>, if these are the only credentials in your file then the profile name is _default_
 
 You can find the AWS repo push commands under your repository in ECR by selecting the "View Push Commands" button.  This will display a guide to the following (replace <aws-credentials-profile\>, <aws-account-id\> and <version\> accordingly):
@@ -144,28 +144,142 @@ You can find the AWS repo push commands under your repository in ECR by selectin
     docker push <aws-account-id>.dkr.ecr.eu-west-2.amazonaws.com/github-audit-dashboard-lambda:<version>
     ```
 
-## AWS Lambda Setup
+## Deployment to AWS
 
-Once the container is pushed to ECR, we can run it as a Lambda function.
+The deployment of the service is defined in Infrastructure as Code (IaC) using Terraform.  The service is deployed as a container on an AWS Fargate Service Cluster.
 
-1. Create a Lambda Function, selecting the Container Image option.
-2. Once the option is selected, we then need to name the function and select the ECR image which we want the Lambda function to use.
-3. Once created, we then need to add some extra permissions to the IAM role which Lambda created for the function.
+### Deployment Prerequisites
 
-    1. Navigate to Configuration > Permissions
-    2. Click on the **Role Name** to be redirected to IAM.
-    3. Once redirected to IAM > Role > <role_name>, we need to add 2 permissions. Click on Add permissions > Create inline policy.
-    4. Here we can select which permissions we want to give for which services. For this script, we need to have the following permissions:
-        
-        Secret Manager
-        - GetSecretValue
+When first deploying the service to AWS the following prerequisites are expected to be in place or added.
 
-        S3 
-        - GetObject
-        - PutObject
+#### Underlying AWS Infrastructure
 
-    5. Once these have been added, our Lambda function now has all the necessary permissions to execute the container on ECR.
+The Terraform in this repository expects that underlying AWS infrastructure is present in AWS to deploy on top of, i.e:
 
-4. Now that the Lambda function has the correct permissions, we can test it.
+- Route53 DNS Records
+- Web Application Firewall and appropriate Rules and Rule Groups
+- Virtual Private Cloud with Private and Public Subnets
+- Security Groups
+- Application Load Balancer
+- ECS Service Cluster
 
-5. Once a Lambda function has been created, we can schedule it to run periodically using Amazon [EventBridge](https://aws.amazon.com/eventbridge/). The function should be run daily.
+That infrastructure is defined in the repository [sdp-infrastructure](https://github.com/ONS-Innovation/sdp-infrastructure)
+
+#### Bootstrap IAM User Groups, Users and an ECSTaskExecutionRole
+
+The following users must be provisioned in AWS IAM:
+
+- ecr-user
+  - Used for interaction with the Elastic Container Registry from AWS cli
+- ecs-app-user
+  - Used for terraform staging of the resources required to deploy the service
+
+The following groups and permissions must be defined and applied to the above users:
+
+- ecr-user-group
+  - EC2 Container Registry Access
+- ecs-application-user-group
+  - Dynamo DB Access
+  - EC2 Access
+  - ECS Access
+  - ECS Task Execution Role Policy
+  - Route53 Access
+  - S3 Access
+  - Cloudwatch Logs All Access (Custom Policy)
+  - IAM Access
+  - Secrets Manager Access
+
+**The Lambda Script Terraform requires some additional permissions to those above:**
+
+- AmazonEC2ContainerRegistryFullAccess
+- AmazonEventBridgeFullAccess
+- AWSLambda_FullAccess
+
+Further to the above an IAM Role must be defined to allow ECS tasks to be executed:
+
+- ecsTaskExecutionRole
+  - See the [AWS guide to create the task execution role policy](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_execution_IAM_role.html)
+
+#### Bootstrap for Terraform
+
+To store the state and implement a state locking mechanism for the service resources a Terraform backend is deployed in AWS (an S3 object and DynamoDbTable).
+
+#### Running the Terraform
+
+There are associated README files in each of the Terraform modules in this repository.  
+
+- terraform/service/main.tf
+  - This provisions the resources required to launch the service.
+
+Depending upon which environment you are deploying to you will want to run your terraform by pointing at an appropriate environment tfvars file.  
+
+Example service tfvars file:
+[/env/sandbox/example_tfvars.txt](./terraform/env/sandbox/example_tfvars.txt)
+
+### Updating the running service using Terraform
+
+If the application has been modified then the following can be performed to update the running service:
+
+- Build a new version of the container image and upload to ECR as per the instructions earlier in this guide.
+- Change directory to the **terraform**
+
+  ```bash
+  cd terraform
+  ```
+
+- In the appropriate environment variable file env/sandbox/sandbox.tfvars, env/dev/dev.tfvars or env/prod/prod.tfvars
+  - Fill out the appropriate variables
+
+- Initialise terraform for the appropriate environment config file _backend-dev.tfbackend_ or _backend-prod.tfbackend_ run:
+
+  ```bash
+  terraform init -backend-config=env/dev/backend-dev.tfbackend -reconfigure
+  ```
+
+  The reconfigure options ensures that the backend state is reconfigured to point to the appropriate S3 bucket.
+
+  **_Please Note:_** This step requires an **AWS_ACCESS_KEY_ID** and **AWS_SECRET_ACCESS_KEY** to be loaded into the environment if not already in place.
+  This can be done using:
+
+  ```bash
+  export AWS_ACCESS_KEY_ID="<aws_access_key_id>"
+  export AWS_SECRET_ACCESS_KEY="<aws_secret_access_key>"
+  ```
+
+- Refresh the local state to ensure it is in sync with the backend
+
+  ```bash
+  terraform refresh -var-file=env/dev/dev.tfvars
+  ```
+
+- Plan the changes, ensuring you use the correct environment config (depending upon which env you are configuring):
+
+  E.g. for the dev environment run
+
+  ```bash
+  terraform plan -var-file=env/dev/dev.tfvars
+  ```
+
+- Apply the changes, ensuring you use the correct environment config (depending upon which env you are configuring):
+
+  E.g. for the dev environment run
+
+  ```bash
+  terraform apply -var-file=env/dev/dev.tfvars
+  ```
+
+- When the terraform has applied successfully the Lambda and EventBridge Schedule will be created.
+
+### Destroy the Main Service Resources
+
+Delete the service resources by running the following ensuring your reference the correct environment files for the backend-config and var files:
+
+  ```bash
+  cd terraform/service
+
+  terraform init -backend-config=env/dev/backend-dev.tfbackend -reconfigure
+
+  terraform refresh -var-file=env/dev/dev.tfvars
+
+  terraform destroy -var-file=env/dev/dev.tfvars
+  ```
