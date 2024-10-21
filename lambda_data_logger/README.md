@@ -208,23 +208,25 @@ To store the state and implement a state locking mechanism for the service resou
 
 There are associated README files in each of the Terraform modules in this repository.  
 
-- terraform/service/main.tf
-  - This provisions the resources required to launch the service.
+- terraform/dashboard/main.tf
+  - This provisions the resources required to launch the Policy Dashboard iteself.
+- terraform/data_logger/main.tf
+  - This provisions the resources required to launch the Policy Dashboard's data collection Lambda script (data logger).
 
 Depending upon which environment you are deploying to you will want to run your terraform by pointing at an appropriate environment tfvars file.  
 
 Example service tfvars file:
-[/env/sandbox/example_tfvars.txt](./terraform/env/sandbox/example_tfvars.txt)
+[/env/sandbox/example_tfvars.txt](../terraform/dashboard/env/sandbox/example_tfvars.txt)
 
-### Updating the running service using Terraform
+### Updating the running service using Terraform (data_logger)
 
 If the application has been modified then the following can be performed to update the running service:
 
 - Build a new version of the container image and upload to ECR as per the instructions earlier in this guide.
-- Change directory to the **terraform**
+- Change directory to the **terraform/data_logger**
 
   ```bash
-  cd terraform
+  cd terraform/data_logger
   ```
 
 - In the appropriate environment variable file env/sandbox/sandbox.tfvars, env/dev/dev.tfvars or env/prod/prod.tfvars
@@ -275,7 +277,7 @@ If the application has been modified then the following can be performed to upda
 Delete the service resources by running the following ensuring your reference the correct environment files for the backend-config and var files:
 
   ```bash
-  cd terraform/service
+  cd terraform/data_logger
 
   terraform init -backend-config=env/dev/backend-dev.tfbackend -reconfigure
 
