@@ -15,7 +15,7 @@ provider "aws" {
       "Project"       = var.project_tag
       "TeamOwner"     = var.team_owner_tag
       "BusinessOwner" = var.business_owner_tag
-      "Service"       = "${var.project_tag}-ecs-infra"
+      "Service"       = "${var.project_tag}-policy-dashboard-lambda"
       "Environment"   = var.env_name
       "Terraform"     = "true"
     }

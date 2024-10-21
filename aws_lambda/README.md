@@ -171,14 +171,14 @@ The following users must be provisioned in AWS IAM:
 
 - ecr-user
   - Used for interaction with the Elastic Container Registry from AWS cli
-- ecs-app-user
+- terraform-user
   - Used for terraform staging of the resources required to deploy the service
 
 The following groups and permissions must be defined and applied to the above users:
 
 - ecr-user-group
   - EC2 Container Registry Access
-- ecs-application-user-group
+- terraform-user-group
   - Dynamo DB Access
   - EC2 Access
   - ECS Access
