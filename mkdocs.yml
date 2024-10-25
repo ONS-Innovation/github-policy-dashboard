@@ -8,6 +8,7 @@ nav:
   - 'Initial Designs':
     - Requirement Scoping: 'initial_scoping.md'
     - Screen Designs: 'screen_designs.md'
+  - Scorecard Designs: 'scorecard_designs.md'
   - Documentation: 'documentation.md'
 
 theme:
