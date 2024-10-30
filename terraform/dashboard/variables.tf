@@ -104,13 +104,6 @@ variable "business_owner_tag" {
   default     = "DST"
 }
 
-variable "authenticate_users" {
-  description = "Authenticate users"
-  type        = bool
-  default     = false
-}
-
-
 variable "force_deployment" {
   description = "Force new task definition deployment"
   type        = string
