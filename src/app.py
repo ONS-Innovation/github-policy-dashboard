@@ -67,6 +67,9 @@ def load_data(load_date: datetime.date):
     df_secret_scanning = get_table_from_s3(s3, bucket_name, "secret_scanning.json")
     df_dependabot = get_table_from_s3(s3, bucket_name, "dependabot.json")
 
+    # Remove Secret from df_secret_scanning
+    df_secret_scanning["secret"] = df_secret_scanning["secret"].apply(lambda x: x.split(" - ")[0])
+
     return df_repositories, df_secret_scanning, df_dependabot
 
 
@@ -381,7 +384,7 @@ with slo_tab:
     ]
 
     # Rename the columns of the DataFrame
-    df_secret_scanning.columns = ["Repository Name", "Type", "Created At", "Secret", "Link"]
+    df_secret_scanning.columns = ["Repository Name", "Type", "Created At", "Secret Type", "Link"]
 
     # Group the DataFrame by the repository name and the type
     df_secret_scanning_grouped = df_secret_scanning.groupby(["Repository Name", "Type"]).count().reset_index()
@@ -418,7 +421,15 @@ with slo_tab:
         st.subheader(f":blue-background[{selected_secret['Repository Name']} ({selected_secret['Type']})]")
 
         st.dataframe(
-            df_secret_scanning.loc[df_secret_scanning["Repository Name"] == selected_secret["Repository Name"]],
+            df_secret_scanning.loc[df_secret_scanning["Repository Name"] == selected_secret["Repository Name"]][
+                [
+                    "Repository Name",
+                    "Type",
+                    "Created At",
+                    "Secret Type",
+                    "Link"
+                ]
+            ],
             use_container_width=True,
             hide_index=True,
             column_config={"Link": st.column_config.LinkColumn("Link", display_text="Go to Alert")},
@@ -574,7 +585,7 @@ with slo_tab:
                     [
                         "Repository Name",
                         "Dependency",
-                        "Advisory",
+                        # "Advisory",
                         "Severity",
                         "Days Open",
                         "Link",
