@@ -196,13 +196,38 @@ To store the state and implement a state locking mechanism for the service resou
 
 There are associated README files in each of the Terraform modules in this repository.  
 
-- terraform/service/main.tf
+- terraform/dashboard/main.tf
   - This provisions the resources required to launch the service.
+- terraform/data_logger/main.tf
+  - This provisions the resources required to launch the Policy Dashboard's data collection Lambda script (data logger).
+- terraform/authentication/main.tf
+  - This provisions the Cognito authentication used by the service.
 
 Depending upon which environment you are deploying to you will want to run your terraform by pointing at an appropriate environment tfvars file.  
 
-Example service tfvars file:
-[service/env/sandbox/example_tfvars.txt](https://github.com/ONS-Innovation/github-policy-dashboard/terraform/service/env/sandbox/example_tfvars.txt)
+Example dashboard tfvars file:
+[dashboard/env/sandbox/example_tfvars.txt](./terraform/dashboard/env/sandbox/example_tfvars.txt)
+Example data_logger tfvars file:
+[data_logger/env/sandbox/example_tfvars.txt](./terraform/data_logger/env/sandbox/example_tfvars.txt)
+Example authentication tfvars file:
+[authentication/env/sandbox/example_tfvars.txt](./terraform/authentication/env/sandbox/example_tfvars.txt)
+
+#### Provision Users
+
+When the service is first deployed an admin user must be created in the Cognito User Pool that was created when the authentication terraform was applied.
+
+New users are manually provisioned in the AWS Console:
+
+- Navigate to Cognito->User Pools and select the pool created for the service
+- Under the Users section select _Create User_ and choose the following:
+  - _Send an email invitation_
+  - Enter the _ONS email address_ for the user to be added
+  - Select _Mark email address as verified_
+  - Under _Temporary password_ choose:
+    - Generate a password
+  - Select _Create User_
+
+An email invite will be sent to the selected email address along with a one-time password which is valid for 10 days.
 
 ### Updating the running service using Terraform
 

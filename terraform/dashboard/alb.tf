@@ -29,17 +29,13 @@ resource "aws_lb_listener_rule" "service_listener_rule" {
     }
   }
 
-  dynamic "action" {
-    for_each = var.authenticate_users ? [1] : []
+  action {
+    type = "authenticate-cognito"
 
-    content {
-      type = "authenticate-cognito"
-
-      authenticate_cognito {
-        user_pool_arn       = data.terraform_remote_state.ecs_auth.outputs.service_user_pool_arn
-        user_pool_client_id = data.terraform_remote_state.ecs_auth.outputs.service_user_pool_client_id
-        user_pool_domain    = data.terraform_remote_state.ecs_auth.outputs.service_user_pool_domain
-      }
+    authenticate_cognito {
+      user_pool_arn       = data.terraform_remote_state.ecs_auth.outputs.policy_dashboard_user_pool_arn
+      user_pool_client_id = data.terraform_remote_state.ecs_auth.outputs.policy_dashboard_user_pool_client_id
+      user_pool_domain    = data.terraform_remote_state.ecs_auth.outputs.policy_dashboard_user_pool_domain
     }
   }
 
