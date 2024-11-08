@@ -1,6 +1,8 @@
 module "eventbridge" {
   source = "terraform-aws-modules/eventbridge/aws"
 
+  role_name = "${var.lambda_name}-eventbridge-role"
+  
   create_bus = false
 
   rules = {
