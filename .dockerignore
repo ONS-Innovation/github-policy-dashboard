@@ -10,3 +10,4 @@ Makefile
 mkdocs_requirements.txt
 mkdocs.yml
 README.md
+venv/*
