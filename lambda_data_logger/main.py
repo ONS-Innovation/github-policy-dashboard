@@ -6,6 +6,7 @@ import json
 import boto3
 import os
 import logging
+import datetime
 
 org = os.getenv("GITHUB_ORG")
 client_id = os.getenv("GITHUB_APP_CLIENT_ID")
@@ -73,9 +74,27 @@ def handler(event, context):
 
     logger.info("Created API Controller")
 
-    repos = policy_checks.get_repository_data(gh, ql, org)
+    s3 = session.client("s3")
 
-    logger.info("Repository Data Retrieved", extra={"records_added": len(repos)})
+    logger.info("S3 Client Created")
+
+    try:
+        existing_repos = s3.get_object(Bucket=bucket_name, Key="repositories.json")
+        existing_repos = json.loads(existing_repos["Body"].read().decode("utf-8"))
+    except s3.exceptions.NoSuchKey:
+        existing_repos = []
+
+    try:
+        last_run_date = s3.get_object(Bucket=bucket_name, Key="last_updated.txt")
+        last_run_date = datetime.datetime.strptime(last_run_date["Body"].read().decode("utf-8"), "%Y-%m-%d %H:%M:%S")
+    except s3.exceptions.NoSuchKey:
+        last_run_date = datetime.datetime(1900, 1, 1)
+
+    updated_repos = policy_checks.get_repository_data(gh, ql, org, existing_repos, last_run_date)
+
+    repos = updated_repos["repo_list"]
+
+    logger.info("Repository Data Retrieved", extra={"total_records": len(repos), "updated_records": updated_repos["repos_updated"]})
 
     secret_scanning_alerts = policy_checks.get_security_alerts(gh, org, 5, "secret_scanning")
 
@@ -87,10 +106,6 @@ def handler(event, context):
     dependabot_alerts = policy_checks.get_all_dependabot_alerts(gh, org)
 
     logger.info("Dependabot Alerts Retrieved", extra={"records_added": len(dependabot_alerts)})
-
-    s3 = session.client("s3")
-
-    logger.info("S3 Client Created")
 
     s3.put_object(
         Bucket=bucket_name,
@@ -115,6 +130,12 @@ def handler(event, context):
     )
 
     logger.info("Uploaded Dependabot JSON to S3")
+
+    s3.put_object(
+        Bucket=bucket_name,
+        Key="last_updated.txt",
+        Body=datetime.datetime.strftime(datetime.datetime.now(), "%Y-%m-%d %H:%M:%S"),
+    )
 
     logger.info(
         "Process Complete",
