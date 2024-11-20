@@ -1,6 +1,6 @@
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import boto3
 import boto3.resources
@@ -180,7 +180,7 @@ with repository_tab:
     with col1:
         start_date = st.date_input("Start Date", pd.to_datetime(df_repositories["created_at"].min()), key="start_date_repo")
     with col2:
-        end_date = st.date_input("End Date", datetime.now().date(), key="end_date_repo")
+        end_date = st.date_input("End Date", (datetime.now() + timedelta(days=1)).date(), key="end_date_repo")
 
     if end_date < start_date:
         st.error("End date cannot be before start date.")
