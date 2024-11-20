@@ -114,6 +114,9 @@ def handler(event, context):
         )
 
         logger.info("Uploaded Repositories JSON to S3")
+    else:
+        logger.info("Skipping Repository Checks...")
+
 
     if features["run_secret_scanning_updates"]["enabled"]:
         secret_scanning_alerts = policy_checks.get_security_alerts(gh, org, 5, "secret_scanning")
@@ -130,6 +133,8 @@ def handler(event, context):
         )
 
         logger.info("Uploaded Secret Scanning JSON to S3")
+    else:
+        logger.info("Skipping Secret Scanning Updates...")
 
     if features["run_dependabot_updates"]["enabled"]:
         dependabot_alerts = policy_checks.get_all_dependabot_alerts(gh, org)
@@ -143,6 +148,9 @@ def handler(event, context):
         )
 
         logger.info("Uploaded Dependabot JSON to S3")
+    else:
+        logger.info("Skipping Dependabot Updates...")
+
 
     s3.put_object(
         Bucket=bucket_name,
