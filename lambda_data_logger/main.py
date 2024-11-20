@@ -16,7 +16,7 @@ secret_name = os.getenv("AWS_SECRET_NAME")
 secret_reigon = os.getenv("AWS_DEFAULT_REGION")
 
 account = os.getenv("AWS_ACCOUNT_NAME")
-bucket_name = f"{account}-github-audit-dashboard"
+bucket_name = f"{account}-policy-dashboard"
 
 logger = logging.getLogger()
 

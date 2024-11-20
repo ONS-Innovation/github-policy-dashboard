@@ -12,7 +12,7 @@ import streamlit as st
 from botocore.exceptions import ClientError
 
 account = os.getenv("AWS_ACCOUNT_NAME")
-bucket_name = f"{account}-github-audit-dashboard"
+bucket_name = f"{account}-policy-dashboard"
 
 st.set_page_config(
     page_title="GitHub Audit Dashboard",
