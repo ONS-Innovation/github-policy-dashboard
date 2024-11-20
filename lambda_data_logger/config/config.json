@@ -1,0 +1,13 @@
+{
+    "features": {
+        "run_repository_checks": {
+            "enabled": true
+        },
+        "run_dependabot_updates": {
+            "enabled": false
+        },
+        "run_secret_scanning_updates": {
+            "enabled": false
+        }
+    }
+}
