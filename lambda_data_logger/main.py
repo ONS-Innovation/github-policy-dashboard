@@ -105,7 +105,7 @@ def handler(event, context):
 
         repos = updated_repos["repo_list"]
 
-        logger.info("Repository Data Retrieved", extra={"total_records": len(repos), "updated_records": updated_repos["total_repos_updated"]})
+        logger.info("Repository Data Retrieved", extra={"total_records": len(repos), "updated_records": updated_repos["count_repos_updated"]})
 
         s3.put_object(
             Bucket=bucket_name,

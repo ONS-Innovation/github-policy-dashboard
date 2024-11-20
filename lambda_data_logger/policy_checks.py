@@ -545,7 +545,7 @@ def get_repository_data(gh: github_interface, ql: github_graphql_interface, org:
                     return f"Error {repos_response.status_code}: {repos_response.json()["message"]}"
 
             return {
-                "total_repos_updated": repos_updated,
+                "count_repos_updated": repos_updated,
                 "repo_list": repo_list
             }
         else:
