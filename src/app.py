@@ -178,7 +178,7 @@ with repository_tab:
     # Date input for filtering repositories
     col1, col2 = st.columns(2)
     with col1:
-        start_date = st.date_input("Start Date", pd.to_datetime(df_repositories["created_at"][0]), key="start_date_repo")
+        start_date = st.date_input("Start Date", pd.to_datetime(df_repositories["created_at"].min()), key="start_date_repo")
     with col2:
         end_date = st.date_input("End Date", datetime.now().date(), key="end_date_repo")
 
