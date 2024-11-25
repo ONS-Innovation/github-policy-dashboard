@@ -94,7 +94,7 @@ def get_security_alerts(
                             if alert_type == "dependabot":
                                 formatted_alert = {
                                     "repo": alert["repository"]["name"],
-                                    "type": gh.get(alert["repository"]["url"], {}, False).json()["visibility"],
+                                    # "type": gh.get(alert["repository"]["url"], {}, False).json()["visibility"],
                                     "created_at": alert["created_at"],
                                     "dependency": alert["dependency"]["package"]["name"],
                                     "advisory": alert["security_advisory"]["summary"],
@@ -105,7 +105,7 @@ def get_security_alerts(
                             elif alert_type == "secret_scanning":
                                 formatted_alert = {
                                     "repo": alert["repository"]["name"],
-                                    "type": gh.get(alert["repository"]["url"], {}, False).json()["visibility"],
+                                    # "type": gh.get(alert["repository"]["url"], {}, False).json()["visibility"],
                                     "created_at": alert["created_at"],
                                     "secret": f"{alert["secret_type_display_name"]} - {alert["secret"]}",
                                     "link": alert["html_url"],
