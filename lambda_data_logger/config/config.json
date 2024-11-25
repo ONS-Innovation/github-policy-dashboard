@@ -4,10 +4,10 @@
             "enabled": true
         },
         "run_dependabot_updates": {
-            "enabled": false
+            "enabled": true
         },
         "run_secret_scanning_updates": {
-            "enabled": false
+            "enabled": true
         }
     }
 }
