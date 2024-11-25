@@ -1,6 +1,6 @@
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import boto3
 import boto3.resources
@@ -69,6 +69,16 @@ def load_data(load_date: datetime.date):
 
     # Remove Secret from df_secret_scanning
     df_secret_scanning["secret"] = df_secret_scanning["secret"].apply(lambda x: x.split(" - ")[0])
+
+    # Add Repository Type to Dependabot and Secret Scanning
+    df_dependabot.insert(1, "Type", "")
+    df_secret_scanning.insert(1, "Type", "")
+
+    for i in range(0, len(df_dependabot)):
+        df_dependabot.loc[i, "Type"] = df_repositories.loc[df_repositories["name"] == df_dependabot.loc[i, "repo"]].type.values[0]
+
+    for i in range(0, len(df_secret_scanning)):
+        df_secret_scanning.loc[i, "Type"] = df_repositories.loc[df_repositories["name"] == df_secret_scanning.loc[i, "repo"]].type.values[0]
 
     return df_repositories, df_secret_scanning, df_dependabot
 
@@ -358,10 +368,10 @@ with slo_tab:
     col1, col2 = st.columns(2)
     with col1:
         start_date_slo = st.date_input(
-            "Start Date", datetime.now().date() - pd.DateOffset(years=1), key="start_date_slo"
+            "Start Date", pd.to_datetime(df_secret_scanning["created_at"].min()), key="start_date_slo"
         )
     with col2:
-        end_date_slo = st.date_input("End Date", datetime.now().date(), key="end_date_slo")
+        end_date_slo = st.date_input("End Date", datetime.now().date() + timedelta(days=1), key="end_date_slo")
 
     if end_date_slo < start_date_slo:
         st.error("End date cannot be before start date.")
