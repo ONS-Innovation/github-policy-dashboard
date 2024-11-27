@@ -6,6 +6,7 @@ import json
 import boto3
 import os
 import logging
+import datetime
 
 org = os.getenv("GITHUB_ORG")
 client_id = os.getenv("GITHUB_APP_CLIENT_ID")
@@ -15,7 +16,7 @@ secret_name = os.getenv("AWS_SECRET_NAME")
 secret_reigon = os.getenv("AWS_DEFAULT_REGION")
 
 account = os.getenv("AWS_ACCOUNT_NAME")
-bucket_name = f"{account}-github-audit-dashboard"
+bucket_name = f"{account}-policy-dashboard"
 
 logger = logging.getLogger()
 
@@ -40,8 +41,14 @@ logger = logging.getLogger()
 #     "records_added": 10
 # }
 
+# Get Feature List
+with open("config/config.json", "r") as f:
+    features = json.load(f)["features"]
+
 
 def handler(event, context):
+
+    start = datetime.datetime.now()
 
     # Create a boto3 session
     session = boto3.Session()
@@ -73,48 +80,87 @@ def handler(event, context):
 
     logger.info("Created API Controller")
 
-    repos = policy_checks.get_repository_data(gh, ql, org)
-
-    logger.info("Repository Data Retrieved", extra={"records_added": len(repos)})
-
-    secret_scanning_alerts = policy_checks.get_security_alerts(gh, org, 5, "secret_scanning")
-
-    logger.info(
-        "Secret Scanning Alerts Retrieved",
-        extra={"records_added": len(secret_scanning_alerts)},
-    )
-
-    dependabot_alerts = policy_checks.get_all_dependabot_alerts(gh, org)
-
-    logger.info("Dependabot Alerts Retrieved", extra={"records_added": len(dependabot_alerts)})
-
     s3 = session.client("s3")
 
     logger.info("S3 Client Created")
 
+    logger.info("Running the check defined in config.json", extra={
+        "features": features
+    })
+
+    if features["run_repository_checks"]["enabled"]:
+        try:
+            existing_repos = s3.get_object(Bucket=bucket_name, Key="repositories.json")
+            existing_repos = json.loads(existing_repos["Body"].read().decode("utf-8"))
+        except s3.exceptions.NoSuchKey:
+            existing_repos = []
+
+        try:
+            last_run_date = s3.get_object(Bucket=bucket_name, Key="last_updated.txt")
+            last_run_date = datetime.datetime.strptime(last_run_date["Body"].read().decode("utf-8"), "%Y-%m-%d %H:%M:%S")
+        except s3.exceptions.NoSuchKey:
+            last_run_date = datetime.datetime(1900, 1, 1)
+
+        updated_repos = policy_checks.get_repository_data(gh, ql, org, existing_repos, last_run_date)
+
+        repos = updated_repos["repo_list"]
+
+        logger.info("Repository Data Retrieved", extra={"total_records": len(repos), "updated_records": updated_repos["count_repos_updated"]})
+
+        s3.put_object(
+            Bucket=bucket_name,
+            Key="repositories.json",
+            Body=json.dumps(repos, indent=4).encode("utf-8"),
+        )
+
+        logger.info("Uploaded Repositories JSON to S3")
+    else:
+        logger.info("Skipping Repository Checks...")
+        repos = []
+
+
+    if features["run_secret_scanning_updates"]["enabled"]:
+        secret_scanning_alerts = policy_checks.get_security_alerts(gh, org, 5, "secret_scanning")
+
+        logger.info(
+            "Secret Scanning Alerts Retrieved",
+            extra={"records_added": len(secret_scanning_alerts)},
+        )
+
+        s3.put_object(
+            Bucket=bucket_name,
+            Key="secret_scanning.json",
+            Body=json.dumps(secret_scanning_alerts, indent=4).encode("utf-8"),
+        )
+
+        logger.info("Uploaded Secret Scanning JSON to S3")
+    else:
+        logger.info("Skipping Secret Scanning Updates...")
+        secret_scanning_alerts = []
+
+
+    if features["run_dependabot_updates"]["enabled"]:
+        dependabot_alerts = policy_checks.get_all_dependabot_alerts(gh, org)
+
+        logger.info("Dependabot Alerts Retrieved", extra={"records_added": len(dependabot_alerts)})
+
+        s3.put_object(
+            Bucket=bucket_name,
+            Key="dependabot.json",
+            Body=json.dumps(dependabot_alerts, indent=4).encode("utf-8"),
+        )
+
+        logger.info("Uploaded Dependabot JSON to S3")
+    else:
+        logger.info("Skipping Dependabot Updates...")
+        dependabot_alerts = []
+
+
     s3.put_object(
         Bucket=bucket_name,
-        Key="repositories.json",
-        Body=json.dumps(repos, indent=4).encode("utf-8"),
+        Key="last_updated.txt",
+        Body=datetime.datetime.strftime(start, "%Y-%m-%d %H:%M:%S"),
     )
-
-    logger.info("Uploaded Repositories JSON to S3")
-
-    s3.put_object(
-        Bucket=bucket_name,
-        Key="secret_scanning.json",
-        Body=json.dumps(secret_scanning_alerts, indent=4).encode("utf-8"),
-    )
-
-    logger.info("Uploaded Secret Scanning JSON to S3")
-
-    s3.put_object(
-        Bucket=bucket_name,
-        Key="dependabot.json",
-        Body=json.dumps(dependabot_alerts, indent=4).encode("utf-8"),
-    )
-
-    logger.info("Uploaded Dependabot JSON to S3")
 
     logger.info(
         "Process Complete",
