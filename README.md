@@ -22,6 +22,12 @@ There is a guide to getting started on this repository's GitHub Pages site.
 Prior to running outside of Docker ensure you have the necessary environment variables setup locally where you are running the application. E.g in linux or OSX you can run the following, providing appropriate values for the variables:
 
 ```bash
+export AWS_ACCESS_KEY_ID=<aws_access_key_id> 
+export AWS_SECRET_ACCESS_KEY=<aws_secret_access_key_id> 
+export AWS_DEFAULT_REGION=eu-west-2 
+export AWS_SECRET_NAME=<aws_secret_name> 
+export GITHUB_ORG=ONSDigital 
+export GITHUB_APP_CLIENT_ID=<github_app_client_id>
 export AWS_ACCOUNT_NAME=sdp-sandbox
 ```
 
@@ -76,6 +82,9 @@ docker run -p 8501:8501 \
 -e AWS_ACCESS_KEY_ID=<aws_access_key_id> \
 -e AWS_SECRET_ACCESS_KEY=<aws_secret_access_key_id> \
 -e AWS_DEFAULT_REGION=eu-west-2 \
+-e AWS_SECRET_NAME=<aws_secret_name> \
+-e GITHUB_ORG=ONS-Innovation \
+-e GITHUB_APP_CLIENT_ID=<github_app_client_id> \
 -e AWS_ACCOUNT_NAME=sdp-sandbox 
 github-audit-dashboard
 ```
