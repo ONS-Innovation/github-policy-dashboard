@@ -154,14 +154,14 @@ with repository_tab:
     st.header(":blue-background[Repository Analysis]")
 
     # Gets the rules from the repository DataFrame
-    rules = df_repositories.columns.to_list()[3:]
+    rules = df_repositories.columns.to_list()[4:]
 
     # Cleans the rules to remove the "checklist." prefix
     for i in range(len(rules)):
         rules[i] = rules[i].replace("checklist.", "")
 
     # Renames the columns of the DataFrame
-    df_repositories.columns = ["repository", "repository_type", "url"] + rules
+    df_repositories.columns = ["repository", "repository_type", "url", "created_at"] + rules
     # Uses streamlit's session state to store the selected rules
     # This is so that selected rules persist with other inputs (i.e the preset buttons)
     if "selected_rules" not in st.session_state:
@@ -214,7 +214,7 @@ with repository_tab:
         rules_to_exclude = []
 
         for rule in rules:
-            if rule not in selected_rules and "created_at" not in rule:
+            if rule not in selected_rules:
                 rules_to_exclude.append(rule)
 
         # Remove the columns for rules that aren't selected
