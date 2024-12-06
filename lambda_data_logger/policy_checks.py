@@ -94,7 +94,7 @@ def get_security_alerts(
                             if alert_type == "dependabot":
                                 formatted_alert = {
                                     "repo": alert["repository"]["name"],
-                                    "type": gh.get(alert["repository"]["url"], {}, False).json()["visibility"],
+                                    # "type": gh.get(alert["repository"]["url"], {}, False).json()["visibility"],
                                     "created_at": alert["created_at"],
                                     "dependency": alert["dependency"]["package"]["name"],
                                     "advisory": alert["security_advisory"]["summary"],
@@ -105,7 +105,7 @@ def get_security_alerts(
                             elif alert_type == "secret_scanning":
                                 formatted_alert = {
                                     "repo": alert["repository"]["name"],
-                                    "type": gh.get(alert["repository"]["url"], {}, False).json()["visibility"],
+                                    # "type": gh.get(alert["repository"]["url"], {}, False).json()["visibility"],
                                     "created_at": alert["created_at"],
                                     "secret": f"{alert["secret_type_display_name"]} - {alert["secret"]}",
                                     "link": alert["html_url"],
@@ -443,7 +443,7 @@ def point_of_contact_exists(ql: github_graphql_interface, repo_name: str, org: s
         return True
 
 # Uses the above checks to get the repository data
-def get_repository_data(gh: github_interface, ql: github_graphql_interface, org: str) -> list[dict] | str:
+def get_repository_data(gh: github_interface, ql: github_graphql_interface, org: str, existing_repos: list, last_run_date: datetime.datetime) -> dict | str:
     """
     Gets all the repositories in the organisation and runs the policy checks on them.
 
@@ -455,7 +455,8 @@ def get_repository_data(gh: github_interface, ql: github_graphql_interface, org:
         or
         str (an error has occured when accessing the API)
     """
-    repo_list = []
+    repo_list = existing_repos
+    repos_updated = 0
 
     repos_response = gh.get(f"/orgs/{org}/repos", {"per_page": 100})
 
@@ -474,60 +475,79 @@ def get_repository_data(gh: github_interface, ql: github_graphql_interface, org:
                     repos = repos_response.json()
 
                     for repo in repos:
-                        codeowners_missing = check_file_missing(repo["contents_url"], gh, [".github/CODEOWNERS", "CODEOWNERS", "docs/CODEOWNERS"])
-
-                        repo_info = {
-                            "name": repo["name"],
-                            "type": repo["visibility"],
-                            "url": repo["html_url"],
-                            "created_at": repo["created_at"],
-                            "checklist": {
-                                "inactive": check_inactive(repo),
-                                "unprotected_branches": check_branch_protection(
-                                    repo["branches_url"].replace("{/branch}", ""), gh
-                                ),
-                                "unsigned_commits": check_signed_commits(repo["commits_url"].replace("{/sha}", ""), gh),
-                                "readme_missing": check_file_missing(
-                                    repo["contents_url"],
-                                    gh,
-                                    [
-                                        "README.md",
-                                        "readme.md",
-                                        "docs/README.md",
-                                        "docs/readme.md",
-                                    ],
-                                ),
-                                "license_missing": check_file_missing(
-                                    repo["contents_url"], gh, ["LICENSE.md", "LICENSE"]
-                                ),
-                                "pirr_missing": check_file_missing(repo["contents_url"], gh, ["PIRR.md"]),
-                                "gitignore_missing": check_file_missing(repo["contents_url"], gh, [".gitignore"]),
-                                "external_pr": check_external_pr(
-                                    repo["pulls_url"].replace("{/number}", ""),
-                                    repo["full_name"],
-                                    gh,
-                                ),
-                                "breaks_naming_convention": check_breaks_naming(repo["name"]),
-                                "secret_scanning_disabled": check_secret_scanning(repo),
-                                "dependabot_disabled": check_dependabot(gh, repo["url"]),
-                                "codeowners_missing": codeowners_missing,
-                                "point_of_contact_missing": point_of_contact_exists(ql, repo["name"], org, codeowners_missing)
-                            }
-                        }
-
-                        # If repo type is public, then PIRR check does not apply, so set to False
-                        # If repo type is private/internal, then License check does not apply, so set to False
-                        if repo_info["type"] == "public":
-                            repo_info["checklist"]["pirr_missing"] = False
+                        if datetime.datetime.strptime(repo["updated_at"], "%Y-%m-%dT%H:%M:%SZ") < last_run_date:
+                            pass
                         else:
-                            repo_info["checklist"]["license_missing"] = False
+                            codeowners_missing = check_file_missing(repo["contents_url"], gh, [".github/CODEOWNERS", "CODEOWNERS", "docs/CODEOWNERS"])
 
-                        repo_list.append(repo_info)
+                            repo_info = {
+                                "name": repo["name"],
+                                "type": repo["visibility"],
+                                "url": repo["html_url"],
+                                "created_at": repo["created_at"],
+                                "checklist": {
+                                    "inactive": check_inactive(repo),
+                                    "unprotected_branches": check_branch_protection(
+                                        repo["branches_url"].replace("{/branch}", ""), gh
+                                    ),
+                                    "unsigned_commits": check_signed_commits(repo["commits_url"].replace("{/sha}", ""), gh),
+                                    "readme_missing": check_file_missing(
+                                        repo["contents_url"],
+                                        gh,
+                                        [
+                                            "README.md",
+                                            "readme.md",
+                                            "docs/README.md",
+                                            "docs/readme.md",
+                                        ],
+                                    ),
+                                    "license_missing": check_file_missing(
+                                        repo["contents_url"], gh, ["LICENSE.md", "LICENSE"]
+                                    ),
+                                    "pirr_missing": check_file_missing(repo["contents_url"], gh, ["PIRR.md"]),
+                                    "gitignore_missing": check_file_missing(repo["contents_url"], gh, [".gitignore"]),
+                                    "external_pr": check_external_pr(
+                                        repo["pulls_url"].replace("{/number}", ""),
+                                        repo["full_name"],
+                                        gh,
+                                    ),
+                                    "breaks_naming_convention": check_breaks_naming(repo["name"]),
+                                    "secret_scanning_disabled": check_secret_scanning(repo),
+                                    "dependabot_disabled": check_dependabot(gh, repo["url"]),
+                                    "codeowners_missing": codeowners_missing,
+                                    "point_of_contact_missing": point_of_contact_exists(ql, repo["name"], org, codeowners_missing)
+                                }
+                            }
+
+                            # If repo type is public, then PIRR check does not apply, so set to False
+                            # If repo type is private/internal, then License check does not apply, so set to False
+                            if repo_info["type"] == "public":
+                                repo_info["checklist"]["pirr_missing"] = False
+                            else:
+                                repo_info["checklist"]["license_missing"] = False
+
+                            # If the repository is not in the list, add it
+                            # Also add the repository if the last run date is 1900-01-01 (first run)
+                            # This stops the else statement from running, saving another for loop
+                            if (not any(d["name"] == repo_info["name"] for d in repo_list)) or (last_run_date == datetime.datetime(1900, 1, 1)):
+                                repo_list.append(repo_info)
+                                repos_updated += 1
+
+                            else:
+                                # If the repository is in the list, update the information
+                                for i in range(0, len(repo_list)):
+                                    if repo_list[i]["name"] == repo_info["name"]:
+                                        repo_list[i]["checklist"] = repo_info["checklist"]
+                                        repos_updated += 1
+                                        break
 
                 else:
                     return f"Error {repos_response.status_code}: {repos_response.json()["message"]}"
 
-            return repo_list
+            return {
+                "count_repos_updated": repos_updated,
+                "repo_list": repo_list
+            }
         else:
             return f"Error {repos_response.status_code}: {repos_response.json()["message"]}"
     else:

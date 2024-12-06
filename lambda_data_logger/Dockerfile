@@ -7,6 +7,9 @@ RUN dnf install git -y
 # Copy requirements.txt
 COPY requirements.txt ${LAMBDA_TASK_ROOT}
 
+# Copy config folder
+COPY config ${LAMBDA_TASK_ROOT}/config
+
 # Install the specified packages
 RUN pip install -r requirements.txt
 

@@ -47,8 +47,20 @@ resource "aws_ecs_task_definition" "ecs_service_definition" {
           value = var.region
         },
         {
+          name  = "AWS_SECRET_NAME"
+          value = var.aws_secret_name
+        },
+        {
           name  = "AWS_ACCOUNT_NAME"
           value = var.domain
+        },
+        {
+          name  = "GITHUB_ORG"
+          value = var.github_org
+        },
+        {
+          name  = "GITHUB_APP_CLIENT_ID"
+          value = var.github_app_client_id
         }
       ],
       logConfiguration = {

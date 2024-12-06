@@ -1,6 +1,6 @@
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import boto3
 import boto3.resources
@@ -11,8 +11,17 @@ import plotly.express as px
 import streamlit as st
 from botocore.exceptions import ClientError
 
+import github_api_toolkit
+
+org = os.getenv("GITHUB_ORG")
+client_id = os.getenv("GITHUB_APP_CLIENT_ID")
+
+# AWS Secret Manager Secret Name for the .pem file
+secret_name = os.getenv("AWS_SECRET_NAME")
+secret_reigon = os.getenv("AWS_DEFAULT_REGION")
+
 account = os.getenv("AWS_ACCOUNT_NAME")
-bucket_name = f"{account}-github-audit-dashboard"
+bucket_name = f"{account}-policy-dashboard"
 
 st.set_page_config(
     page_title="GitHub Audit Dashboard",
@@ -21,13 +30,17 @@ st.set_page_config(
 )
 st.logo("./src/branding/ONS_Logo_Digital_Colour_Landscape_Bilingual_RGB.svg")
 
+session = boto3.Session()
 
 @st.cache_resource
 def get_s3_client() -> boto3.client:
-    session = boto3.Session()
     s3 = session.client("s3")
     return s3
 
+@st.cache_resource
+def get_secret_manager_client() -> boto3.client:
+    secret_manager = session.client("secretsmanager", secret_reigon)
+    return secret_manager
 
 def get_table_from_s3(s3, bucket_name: str, object_name: str) -> pd.DataFrame | str:
     """Gets a JSON file from an S3 bucket and returns it as a Pandas DataFrame.
@@ -69,6 +82,16 @@ def load_data(load_date: datetime.date):
 
     # Remove Secret from df_secret_scanning
     df_secret_scanning["secret"] = df_secret_scanning["secret"].apply(lambda x: x.split(" - ")[0])
+
+    # Add Repository Type to Dependabot and Secret Scanning
+    df_dependabot.insert(1, "Type", "")
+    df_secret_scanning.insert(1, "Type", "")
+
+    for i in range(0, len(df_dependabot)):
+        df_dependabot.loc[i, "Type"] = df_repositories.loc[df_repositories["name"] == df_dependabot.loc[i, "repo"]].type.values[0]
+
+    for i in range(0, len(df_secret_scanning)):
+        df_secret_scanning.loc[i, "Type"] = df_repositories.loc[df_repositories["name"] == df_secret_scanning.loc[i, "repo"]].type.values[0]
 
     return df_repositories, df_secret_scanning, df_dependabot
 
@@ -131,14 +154,14 @@ with repository_tab:
     st.header(":blue-background[Repository Analysis]")
 
     # Gets the rules from the repository DataFrame
-    rules = df_repositories.columns.to_list()[3:]
+    rules = df_repositories.columns.to_list()[4:]
 
     # Cleans the rules to remove the "checklist." prefix
     for i in range(len(rules)):
         rules[i] = rules[i].replace("checklist.", "")
 
     # Renames the columns of the DataFrame
-    df_repositories.columns = ["repository", "repository_type", "url"] + rules
+    df_repositories.columns = ["repository", "repository_type", "url", "created_at"] + rules
     # Uses streamlit's session state to store the selected rules
     # This is so that selected rules persist with other inputs (i.e the preset buttons)
     if "selected_rules" not in st.session_state:
@@ -178,9 +201,9 @@ with repository_tab:
     # Date input for filtering repositories
     col1, col2 = st.columns(2)
     with col1:
-        start_date = st.date_input("Start Date", pd.to_datetime(df_repositories["created_at"][0]), key="start_date_repo")
+        start_date = st.date_input("Start Date", pd.to_datetime(df_repositories["created_at"].min()), key="start_date_repo")
     with col2:
-        end_date = st.date_input("End Date", datetime.now().date(), key="end_date_repo")
+        end_date = st.date_input("End Date", (datetime.now() + timedelta(days=1)).date(), key="end_date_repo")
 
     if end_date < start_date:
         st.error("End date cannot be before start date.")
@@ -191,7 +214,7 @@ with repository_tab:
         rules_to_exclude = []
 
         for rule in rules:
-            if rule not in selected_rules and "created_at" not in rule:
+            if rule not in selected_rules:
                 rules_to_exclude.append(rule)
 
         # Remove the columns for rules that aren't selected
@@ -323,23 +346,58 @@ with repository_tab:
 
         # If a non-compliant repository is selected, display the rules that are broken
         if len(selected_repo["selection"]["rows"]) > 0:
-            selected_repo = selected_repo["selection"]["rows"][0]
 
-            selected_repo = df_repositories.iloc[selected_repo]
+            with st.spinner("Loading Repository Information..."):
 
-            failed_checks = selected_repo[4:-2].loc[selected_repo[4:-2] == 1]
+                selected_repo = selected_repo["selection"]["rows"][0]
 
-            col1, col2 = st.columns([0.8, 0.2])
+                selected_repo = df_repositories.iloc[selected_repo]
 
-            col1.subheader(
-                f":blue-background[{selected_repo["Repository"]} ({selected_repo["Repository Type"].capitalize()})]"
-            )
-            col2.write(f"[Go to Repository]({selected_repo['URL']})")
+                failed_checks = selected_repo[4:-2].loc[selected_repo[4:-2] == 1]
 
-            st.subheader("Rules Broken:")
+                # Get Point of Contact List
+                secret_manager = get_secret_manager_client()
 
-            for check in failed_checks.index:
-                st.write(f"- {check.replace('_', ' ').title()}")
+                secret = secret_manager.get_secret_value(SecretId=secret_name)["SecretString"]
+
+                token = github_api_toolkit.get_token_as_installation(org, secret, client_id)
+
+                ql = github_api_toolkit.github_graphql_interface(token[0])
+
+                points_of_contact_main = ql.get_repository_email_list(org, selected_repo["Repository"], "main")
+                points_of_contact_master = ql.get_repository_email_list(org, selected_repo["Repository"], "master")
+
+                points_of_contact = points_of_contact_main + points_of_contact_master
+
+                col1, col2 = st.columns([0.8, 0.2])
+
+                col1.subheader(
+                    f":blue-background[{selected_repo["Repository"]} ({selected_repo["Repository Type"].capitalize()})]"
+                )
+                col2.write(f"[Go to Repository]({selected_repo['URL']})")
+
+                st.subheader("Rules Broken:")
+
+                for check in failed_checks.index:
+                    st.write(f"- {check.replace('_', ' ').title()}")
+
+                st.subheader("Point of Contact:")
+
+                if len(points_of_contact) > 0:
+                    st.write("The following people are responsible for this repository:")
+                    
+                    for contact in points_of_contact:
+                        st.write(f"- {contact}")
+                    
+                    st.write("Please contact them to resolve the issues.")
+                
+                    mail_link = f"mailto:{', '.join(points_of_contact)}"
+
+                    st.html(
+                        f'<a href="{mail_link}"><button>Email Points of Contact</button></a>'
+                    )
+                else:
+                    st.write("No point of contact available.")
         else:
             st.caption("Select a repository for more information.")
 
@@ -358,10 +416,10 @@ with slo_tab:
     col1, col2 = st.columns(2)
     with col1:
         start_date_slo = st.date_input(
-            "Start Date", datetime.now().date() - pd.DateOffset(years=1), key="start_date_slo"
+            "Start Date", pd.to_datetime(df_secret_scanning["created_at"].min()), key="start_date_slo"
         )
     with col2:
-        end_date_slo = st.date_input("End Date", datetime.now().date(), key="end_date_slo")
+        end_date_slo = st.date_input("End Date", datetime.now().date() + timedelta(days=1), key="end_date_slo")
 
     if end_date_slo < start_date_slo:
         st.error("End date cannot be before start date.")
