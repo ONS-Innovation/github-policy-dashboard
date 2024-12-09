@@ -393,11 +393,11 @@ with repository_tab:
                 
                     mail_link = (
                                     f"mailto:{','.join(points_of_contact)}"
-                                    f"?subject={selected_repo['Repository']}%20-GitHub%20Usage%20Policy%20Recommendations"
-                                    "&body=Hello%2C%0A%0AWe%20have%20identified%20some%20issues%20with%20your%20repository%20which%20breach%parts%20of%20the%20GitHub%20Usage%20Policy."
-                                    "Please%20review%20the%20following%20rules%20and%20take%20the%20necessary%20actions%20to%20resolve%20them%0A%0A"
-                                    f"{','.join(failed_checks.index).replace('_', '%20').title()}%0A%0A"
-                                    "If%20you%20have%20any%20questions%20or%20need%20further%20assistance%2C%20please%20reply%20to%20this%20email%2C%0A"
+                                    f"?subject={selected_repo['Repository']}%20-%20GitHub%20Usage%20Policy%20Recommendations"
+                                    f"&body=Hello%2C%0A%0AWe%20have%20identified%20some%20issues%20with%20your%20repository%20-%20{selected_repo['Repository']}%20-%20which%20breach%20parts%20of%20the%20GitHub%20Usage%20Policy.%0A"
+                                    "Please%20review%20the%20following%20rules%20and%20take%20the%20necessary%20actions%20to%20resolve%20them.%0A%0A"
+                                    f"-%20{',%0A-%20'.join(failed_checks.index).replace('_', '%20').title()}%0A%0A"
+                                    "If%20you%20have%20any%20questions%20or%20need%20further%20assistance%2C%20please%20reply%20to%20this%20email.%0A"
                                 )
 
                     st.html(
