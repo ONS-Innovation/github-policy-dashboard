@@ -391,11 +391,30 @@ with repository_tab:
                     
                     st.write("Please contact them to resolve the issues.")
                 
-                    mail_link = f"mailto:{','.join(points_of_contact)}"
+                    mail_link = (
+                                    f"mailto:{','.join(points_of_contact)}"
+                                    f"?subject={selected_repo['Repository']}%20-GitHub%20Usage%20Policy%20Recommendations"
+                                    "&body=Hello%2C%0A%0AWe%20have%20identified%20some%20issues%20with%20your%20repository%20which%20breach%parts%20of%20the%20GitHub%20Usage%20Policy."
+                                    "Please%20review%20the%20following%20rules%20and%20take%20the%20necessary%20actions%20to%20resolve%20them%0A%0A"
+                                    f"{','.join(failed_checks.index).replace('_', '%20').title()}%0A%0A"
+                                    "If%20you%20have%20any%20questions%20or%20need%20further%20assistance%2C%20please%20reply%20to%20this%20email%2C%0A"
+                                )
 
                     st.html(
                         f'<a href="{mail_link}"><button>Email Points of Contact</button></a>'
                     )
+
+                    st.caption("Please Note: The email addresses are separated with a comma following the RFC 6068 standard. To use this link in Microsoft Outlook, you may need to replace the commas with semicolons or enable commas to be used as the recipient seperator.")
+
+                    with st.expander("Instructions for Microsoft Outlook Comma Seperator"):
+                        st.write("To enable this feature in Microsoft Outlook, follow these steps:")
+                        st.write("1. Navigate to File > Options > Mail.")
+                        st.write("2. Under the Send messages section, there is a checkbox for 'Commas can be used to separate multiple message recipients'.")
+                        st.write("3. Check this box and click OK.")
+                        st.write("Now you can use the mailto link in Microsoft Outlook.")
+
+                        st.write("For more information, please refer to [this](https://www.lifewire.com/commas-to-separate-email-recipients-1173680) article.")
+
                 else:
                     st.write("No point of contact available.")
         else:
