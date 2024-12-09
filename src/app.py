@@ -393,11 +393,14 @@ with repository_tab:
                 
                     mail_link = (
                                     f"mailto:{','.join(points_of_contact)}"
-                                    f"?subject={selected_repo['Repository']}%20-%20GitHub%20Usage%20Policy%20Recommendations"
-                                    f"&body=Hello%2C%0A%0AWe%20have%20identified%20some%20issues%20with%20your%20repository%20-%20{selected_repo['Repository']}%20-%20which%20breach%20parts%20of%20the%20GitHub%20Usage%20Policy.%0A"
-                                    "Please%20review%20the%20following%20rules%20and%20take%20the%20necessary%20actions%20to%20resolve%20them.%0A%0A"
-                                    f"-%20{',%0A-%20'.join(failed_checks.index).replace('_', '%20').title()}%0A%0A"
-                                    "If%20you%20have%20any%20questions%20or%20need%20further%20assistance%2C%20please%20reply%20to%20this%20email.%0A"
+                                    f"?subject=ONS%20GitHub%20Usage%20Policy%20Compliance%20-%20{selected_repo['Repository']}"
+                                    "&body=Hello%2C%0A%0A"
+                                    f"We%20have%20identified%20some%20issues%20with%20your%20repository%20%22{selected_repo['Repository']}%22%20which%20is%20not%20currently%20compliant%20with%20ONS%27%20GitHub%20Usage%20Policy.%0A%0A"
+                                    "Please%20check%20your%20repositories%20for%20the%20following%20issues%20and%20take%20the%20appropriate%20action%20to%20resolve%20them.%0A%0A"
+                                    f"-%20{',%0A-%20'.join(failed_checks.index).replace('_', '%20').title().replace("Pirr", "PIRR")}%0A%0A"
+                                    "If%20you%20have%20any%20questions%20or%20need%20further%20assistance%2C%20please%20get%20in%20touch.%0A%0A"
+                                    "Many thanks%2C%0A%0A"
+                                    "Name"
                                 )
 
                     st.html(
