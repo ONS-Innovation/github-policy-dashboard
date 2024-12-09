@@ -391,7 +391,7 @@ with repository_tab:
                     
                     st.write("Please contact them to resolve the issues.")
                 
-                    mail_link = f"mailto:{', '.join(points_of_contact)}"
+                    mail_link = f"mailto:{','.join(points_of_contact)}"
 
                     st.html(
                         f'<a href="{mail_link}"><button>Email Points of Contact</button></a>'
