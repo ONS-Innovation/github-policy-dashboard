@@ -50,3 +50,7 @@ terraform.rc
 
 # Ignore the terraform/service prority calc
 terraform/service/highest_priority.txt
+
+# Lambda Logs and Output
+debug.log
+file.json
