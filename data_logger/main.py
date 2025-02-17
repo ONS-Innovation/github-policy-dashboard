@@ -402,14 +402,16 @@ def calculate_threading_groups(total_repos: int, number_of_threads: int) -> list
 
     return threading_groups
 
+
 @retry_on_error()
-def get_repository_commits(logger: wrapped_logging, ql: github_api_toolkit.github_graphql_interface, org: str, repository: str, max_commits: int = 15) -> list[dict]:
-    
-    logger.log_info(f"Getting commits for {repository}.")
+def get_remaining_data(ql: github_api_toolkit.github_graphql_interface, org: str, repository: str, max_commits: int) -> tuple[list[dict], list[dict], list[dict]]:
 
     query = """
     query($org: String!, $repo: String!, $max_commits: Int!) {
         repository(owner: $org, name: $repo) {
+            
+            # Signed Commits
+            
             defaultBranchRef {
                 target {
                     ... on Commit {
@@ -420,6 +422,26 @@ def get_repository_commits(logger: wrapped_logging, ql: github_api_toolkit.githu
                                 }
                             }
                         }
+                    }
+                }
+            }
+
+            # External PR
+
+            pullRequests(first: 50, states: OPEN) {
+                nodes {
+                    author {
+                        login
+                    }
+                }
+            }
+
+            # Contents
+
+            object(expression: "HEAD:") {
+                ... on Tree {
+                    entries {
+                        name
                     }
                 }
             }
@@ -440,101 +462,24 @@ def get_repository_commits(logger: wrapped_logging, ql: github_api_toolkit.githu
 
     response_json = response.json()
 
-    # If the repository has no commits, the response will be None and a TypeError will be raised
-    # In this case, we will return an empty list
+    # Turn the respective data into a list of commits, pull requests and contents
+    # If an error occurs, return an empty list
     try:
         commits = response_json["data"]["repository"]["defaultBranchRef"]["target"]["history"]["nodes"]
     except TypeError:
         commits = []
 
-    logger.log_info(f"{len(commits)} commits retrieved for {repository}.")
-
-    return commits
-
-
-@retry_on_error()
-def get_repository_pull_requests(logger: wrapped_logging, ql: github_api_toolkit.github_graphql_interface, org: str, repository: str) -> list[dict]:
-
-    logger.log_info(f"Getting pull requests for {repository}.")
-
-    query = """
-    query($org: String!, $repo: String!) {
-        repository(owner: $org, name: $repo) {
-            pullRequests(first: 50, states: OPEN) {
-                nodes {
-                    author {
-                        login
-                    }
-                }
-            }
-        }
-    }
-    """
-
-    variables = {
-        "org": org,
-        "repo": repository
-    }
-
-    response = ql.make_ql_request(query, variables)
-
-    if type(response) is not Response:
-        raise Exception(response)
-
-    response_json = response.json()
-
     try:
         pull_requests = response_json["data"]["repository"]["pullRequests"]["nodes"]
     except Exception:
-        print(response_json)
         pull_requests = []
 
-    logger.log_info(f"{len(pull_requests)} pull requests retrieved for {repository}.")
-
-    return pull_requests
-
-
-@retry_on_error()
-def get_repository_contents(logger: wrapped_logging, ql: github_api_toolkit.github_graphql_interface, org: str, repository: str) -> list[dict]:
-
-    logger.log_info(f"Getting repository contents for {repository}.")
-
-    query = """
-    query($org: String!, $repo: String!) {
-        repository(owner: $org, name: $repo) {
-            object(expression: "HEAD:") {
-                ... on Tree {
-                    entries {
-                        name
-                    }
-                }
-            }
-        }
-    }
-    """
-
-    variables = {
-        "org": org,
-        "repo": repository
-    }
-
-    response = ql.make_ql_request(query, variables)
-
-    if type(response) is not Response:
-        raise Exception(response)
-
-    response_json = response.json()
-
-    # If the repository has no contents, the response will be None and a TypeError will be raised
-    # In this case, we will return an empty list
     try:
         contents = response_json["data"]["repository"]["object"]["entries"]
     except TypeError:
         contents = []
 
-    logger.log_info(f"{len(contents)} repository contents retrieved for {repository}.")
-
-    return contents
+    return commits, pull_requests, contents
 
 
 def get_repository_batch(logger: wrapped_logging, rest: github_api_toolkit.github_interface, ql: github_api_toolkit.github_graphql_interface, org: str, repositories: list[dict], org_members: list[str], inactivity_threshold: int, max_commits: int, start: int, end: int) -> list[dict]:
@@ -547,10 +492,7 @@ def get_repository_batch(logger: wrapped_logging, rest: github_api_toolkit.githu
         repository = repositories[i]
 
         # Get outstanding QL Data (Signed Commits, External PRs and Repository Contents)
-
-        commits = get_repository_commits(logger, ql, org, repository["name"], max_commits)
-        pull_requests = get_repository_pull_requests(logger, ql, org, repository["name"])
-        repository_contents = get_repository_contents(logger, ql, org, repository["name"])
+        commits, pull_requests, repository_contents = get_remaining_data(ql, org, repository["name"], max_commits)
 
         # Get REST Data (Branch Protection, Secret Scanning)
 
@@ -558,18 +500,33 @@ def get_repository_batch(logger: wrapped_logging, rest: github_api_toolkit.githu
 
         # Get Codeowners and Point of Contact
 
-        codeowners_missing = True
+        codeowners_path = ""
+        codeowners_missing = policy_checks.file_missing(repository_contents, "CODEOWNERS")
         point_of_contact_missing = True
 
-        for branch in ["master", "main"]:
+        if not codeowners_missing:
+            codeowners_path = "CODEOWNERS"
 
-            if ql.locate_codeowners_file(org, repository["name"], branch):
+        # If a CODEOWNERS is not found in the root directory, check the .github directory
+        if codeowners_missing and not policy_checks.file_missing(repository_contents, ".github"):
 
+            if ql.get_file_contents_from_repo(org, repository["name"], ".github/CODEOWNERS") != "File not Found.":
                 codeowners_missing = False
+                codeowners_path = ".github/CODEOWNERS"
 
-                if ql.get_repository_email_list(org, repository["name"], branch):
 
-                    point_of_contact_missing = False
+        # If a CODEOWNERS file is found, check if there is a point of contact
+        if not codeowners_missing:
+            
+            contents = ql.get_file_contents_from_repo(org, repository["name"], codeowners_path)
+            codeowners = ql.get_codeowners_from_text(contents)
+            codeowners = ql.identify_teams_and_users(codeowners)
+            codeowners = ql.get_codeowner_users(org, codeowners)
+            emails = ql.get_codeowner_emails(codeowners, org)
+
+            if emails:
+                point_of_contact_missing = False
+
 
         repository_data = {
             "name": repository["name"],
@@ -602,8 +559,6 @@ def get_repository_batch(logger: wrapped_logging, rest: github_api_toolkit.githu
 
         output.append(repository_data)
 
-    logger.log_info(f"Processed {len(output)} repositories.")
-
     return output
 
 
@@ -633,6 +588,8 @@ def get_output_data(logger: wrapped_logging, rest: github_api_toolkit.github_int
     # Wait for all threads to finish
     for thread in threads:
         thread.join()
+
+        logger.log_info(f"{thread.name} processed {len(thread.return_value)} repositories.")
 
         output.extend(thread.return_value)
 
@@ -700,18 +657,24 @@ logger.log_info("API interfaces created.")
 
 repository_collection = get_dict_value(features, "repository_collection")
 
-thread_count = get_dict_value(settings, "thread_count")
-inactivity_threshold = get_dict_value(settings, "inactivity_threshold")
-signed_commit_number = get_dict_value(settings, "signed_commit_number")
+if repository_collection:
 
-repositories, number_of_pages = get_repositories(logger, ql, org)
+    logger.log_info("Repository collection enabled. Collecting repository data.")
 
-logger.log_info(f"Taken {time.time() - start_time} seconds to get GraphQL data.")
+    thread_count = get_dict_value(settings, "thread_count")
+    inactivity_threshold = get_dict_value(settings, "inactivity_threshold")
+    signed_commit_number = get_dict_value(settings, "signed_commit_number")
 
-# TODO: This is being majorly affected by Rate Limits. Need to think of a way to reduce the number of requests made.
-repository_data = get_output_data(logger, rest, ql, org, repositories, inactivity_threshold, signed_commit_number, thread_count)
+    repositories, number_of_pages = get_repositories(logger, ql, org)
 
-logger.log_info(f"Taken {time.time() - start_time} seconds to get and merge REST data into QL data.")
+    logger.log_info(f"Taken {time.time() - start_time} seconds to get GraphQL data.")
+
+    repository_data = get_output_data(logger, rest, ql, org, repositories, inactivity_threshold, signed_commit_number, thread_count)
+
+    logger.log_info(f"Taken {time.time() - start_time} seconds to get and merge REST data into QL data.")
+
+else:
+    logger.log_info("Repository collection disabled. Skipping repository data collection.")
 
 # Get Dependabot Information
 ## Get, Process, and Store Dependabot Information
@@ -729,11 +692,11 @@ secret_scanning_collection = get_dict_value(features, "secret_scanning_collectio
 
 end_time = time.time()
 
-print(f"Execution time: {end_time - start_time} seconds.")
-print(f"Number of repositories: {len(repository_data)}")
+# print(f"Execution time: {end_time - start_time} seconds.")
+# print(f"Number of repositories: {len(repository_data)}")
 
-with open("file.json", "w") as f:
-    json.dump(repository_data, f, indent=4)
+# with open("file.json", "w") as f:
+#     json.dump(repository_data, f, indent=4)
 
 
 def handler(event, context) -> str: # type: ignore[no-untyped-def]

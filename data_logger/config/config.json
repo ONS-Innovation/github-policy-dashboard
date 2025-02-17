@@ -1,6 +1,6 @@
 {
     "features": {
-        "repository_collection": true,
+        "repository_collection": false,
         "dependabot_collection": true,
         "secret_scanning_collection": true,
         "show_log_locally": true
