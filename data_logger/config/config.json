@@ -1,9 +1,10 @@
 {
     "features": {
-        "repository_collection": false,
+        "repository_collection": true,
         "dependabot_collection": true,
         "secret_scanning_collection": true,
-        "show_log_locally": true
+        "show_log_locally": true,
+        "write_to_s3": false
     },
     "settings": {
         "thread_count": 20,

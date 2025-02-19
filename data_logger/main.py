@@ -6,6 +6,7 @@ from functools import wraps
 import boto3
 from requests import Response
 from pprint import pprint
+import datetime
 
 import github_api_toolkit
 
@@ -298,7 +299,21 @@ def get_repositories(
 
 
 def get_rest_data(logger: wrapped_logging, rest: github_api_toolkit.github_interface, org: str, repository: str) -> dict:
-    
+    """Gets the REST data for a repository (branch protection and secret scanning).
+
+    Args:
+        logger (wrapped_logging): The logger object.
+        rest (github_api_toolkit.github_interface): The REST interface for the GitHub API.
+        org (str): The name of the GitHub organization.
+        repository (str): The name of the repository.
+
+    Raises:
+        Exception: If the response from the GitHub API is not a Response object (Request failed).
+
+    Returns:
+        dict: The REST data for the repository.
+    """
+
     checks = {}
 
     logger.log_info(f"Getting REST data for {repository}.")
@@ -346,6 +361,19 @@ def get_rest_data(logger: wrapped_logging, rest: github_api_toolkit.github_inter
 
 
 def get_org_members(logger: wrapped_logging, rest: github_api_toolkit.github_interface, org: str) -> list[str]:
+    """Gets the members of a GitHub organization.
+
+    Args:
+        logger (wrapped_logging): The logger object.
+        rest (github_api_toolkit.github_interface): The REST interface for the GitHub API.
+        org (str): The name of the GitHub organization.
+
+    Raises:
+        Exception: If the response from the GitHub API is not a Response object (Request failed).
+
+    Returns:
+        list[str]: The members of the GitHub organization.
+    """
 
     members = []
 
@@ -381,6 +409,15 @@ def get_org_members(logger: wrapped_logging, rest: github_api_toolkit.github_int
 
 
 def calculate_threading_groups(total_repos: int, number_of_threads: int) -> list[tuple[int, int]]:
+    """Calculates the threading groups for processing repositories.
+
+    Args:
+        total_repos (int): The total number of repositories.
+        number_of_threads (int): The number of threads to use.
+
+    Returns:
+        list[tuple[int, int]]: The threading groups for processing repositories (start, end).
+    """
 
     batch_size = total_repos // number_of_threads
     remainder = total_repos % number_of_threads
@@ -405,6 +442,20 @@ def calculate_threading_groups(total_repos: int, number_of_threads: int) -> list
 
 @retry_on_error()
 def get_remaining_data(ql: github_api_toolkit.github_graphql_interface, org: str, repository: str, max_commits: int) -> tuple[list[dict], list[dict], list[dict]]:
+    """Gets the remaining data for a repository (signed commits, external PRs, repository contents).
+    
+    Args:
+        ql (github_api_toolkit.github_graphql_interface): The GraphQL interface for the GitHub API.
+        org (str): The name of the GitHub organization.
+        repository (str): The name of the repository.
+        max_commits (int): The maximum number of commits to get.
+
+    Raises:
+        Exception: If the response from the GitHub API is not a Response object (Request failed).
+
+    Returns:
+        tuple[list[dict], list[dict], list[dict]]: The remaining data for the repository (signed commits, external PRs, repository contents).
+    """
 
     query = """
     query($org: String!, $repo: String!, $max_commits: Int!) {
@@ -483,6 +534,23 @@ def get_remaining_data(ql: github_api_toolkit.github_graphql_interface, org: str
 
 
 def get_repository_batch(logger: wrapped_logging, rest: github_api_toolkit.github_interface, ql: github_api_toolkit.github_graphql_interface, org: str, repositories: list[dict], org_members: list[str], inactivity_threshold: int, max_commits: int, start: int, end: int) -> list[dict]:
+    """Processes a batch of repositories.
+
+    Args:
+        logger (wrapped_logging): The logger object.
+        rest (github_api_toolkit.github_interface): The REST interface for the GitHub API.
+        ql (github_api_toolkit.github_graphql_interface): The GraphQL interface for the GitHub API.
+        org (str): The name of the GitHub organization.
+        repositories (list[dict]): The list of repositories.
+        org_members (list[str]): The members of the GitHub organization.
+        inactivity_threshold (int): The inactivity threshold for a repository to be considered inactive.
+        max_commits (int): The maximum number of commits to get for the signed commits check.
+        start (int): The start index of the batch.
+        end (int): The end index of the batch.
+
+    Returns:
+        list[dict]: The processed repositories in the batch.
+    """
 
     output = []
 
@@ -563,7 +631,21 @@ def get_repository_batch(logger: wrapped_logging, rest: github_api_toolkit.githu
 
 
 def get_output_data(logger: wrapped_logging, rest: github_api_toolkit.github_interface, ql: github_api_toolkit.github_graphql_interface, org: str, repositories: list[dict], inactivity_threshold: int, signed_commit_number: int, thread_count: int) -> list[dict]:
+    """Gets the output data for all the repositories.
 
+    Args:
+        logger (wrapped_logging): The logger object.
+        rest (github_api_toolkit.github_interface): The REST interface for the GitHub API.
+        ql (github_api_toolkit.github_graphql_interface): The GraphQL interface for the GitHub API.
+        org (str): The name of the GitHub organization.
+        repositories (list[dict]): The list of repositories.
+        inactivity_threshold (int): The inactivity threshold for a repository to be considered inactive.
+        signed_commit_number (int): The maximum number of commits to get for the signed commits check.
+        thread_count (int): The number of threads to use.
+
+    Returns:
+        list[dict]: The output data for all the repositories.
+    """
 
     output = []
 
@@ -596,7 +678,198 @@ def get_output_data(logger: wrapped_logging, rest: github_api_toolkit.github_int
     logger.log_info(f"Processed {len(output)} repositories.")
 
     return output
-      
+
+
+def save_information(write_to_s3: bool, filename: str, data: Any, s3: boto3.client = None, bucket_name: str = None):
+    """Saves information to a file.
+
+    Args:
+        write_to_s3 (bool): Whether to write the information to S3 or locally.
+        filename (str): The name of the file to save the information to.
+        data (Any): The data to save (JSON ONLY).
+        s3 (boto3.client, optional): The S3 Client. Defaults to None.
+        bucket_name (str, optional): The name of the S3 bucket to write to. Defaults to None.
+
+    Raises:
+        Exception: If the S3 client and bucket name are not provided when writing to S3.
+    """
+
+    if write_to_s3:
+
+        if not s3 or not bucket_name:
+            raise Exception("S3 client and bucket name required to write to S3.")
+        
+        s3.put_object(Bucket=bucket_name, Key=filename, Body=json.dumps(data, indent=4))
+
+        logger.log_info(f"{filename} uploaded to S3.")
+
+    else:
+
+        # Check if ./output directory exists
+        if not os.path.exists("./output"):
+            os.makedirs("./output")
+
+        # Write the data to a file locally
+        filename = f"./output/{filename}"
+
+        with open(filename, "w") as f:
+            f.write(json.dumps(data, indent=4))
+
+        logger.log_info(f"{filename} written locally.")
+
+
+def process_dependabot_alerts(response_json: dict, threshold: int) -> list[dict]:
+    """Processes the given dependabot alerts. Checks each alert against the threshold and formats the data.
+
+    Args:
+        response_json (dict): The dependabot response JSON from the GitHub API.
+        threshold (int): The number of days an alert has been open for before it is considered a problem.
+
+    Returns:
+        list[dict]: The formatted dependabot alerts.
+    """
+
+    dependabot_data = []
+
+    for alert in response_json:
+
+        days_open = datetime.datetime.now() - datetime.datetime.strptime(alert["created_at"], "%Y-%m-%dT%H:%M:%SZ")
+
+        days_open = days_open.days
+
+        if (days_open > threshold):
+
+            formatted_alert = {
+                "repository": alert["repository"]["name"],
+                "repository_url": alert["repository"]["html_url"],
+                "created_at": alert["created_at"],
+                "severity": alert["security_advisory"]["severity"]
+            }
+
+            dependabot_data.append(formatted_alert)
+
+    return dependabot_data
+
+def get_dependabot_data_for_severity(rest: github_api_toolkit.github_interface, org: str, severity: str, threshold: int) -> list[dict]:
+    """Gets the Dependabot data for all the repositories in an organization.
+
+    Args:
+        logger (wrapped_logging): The logger object.
+        rest (github_api_toolkit.github_interface): The REST interface for the GitHub API.
+        org (str): The name of the GitHub organization.
+        severity (str): The severity of the Dependabot alerts to get.
+        threshold (int): The number of days an alert has been open for before it is considered a problem.
+
+    Returns:
+        list[dict]: The Dependabot data for all the repositories in the organization.
+    """
+
+    dependabot_data = []
+
+    # Get the threshold for the given severity
+
+
+    response = rest.get(f"/orgs/{org}/dependabot/alerts", {"state": "open", "severity": severity, "per_page": 100})
+
+    if type(response) is not Response:
+        raise Exception(response)
+
+    try:
+        last_page = int(response.links["last"]["url"].split("=")[-1])
+    except KeyError:
+        last_page = 1
+
+    for page in range(1, last_page + 1):
+        response = rest.get(f"/orgs/{org}/dependabot/alerts", {"state": "open", "per_page": 100, "severity": severity, "page": page})
+
+        if type(response) is not Response:
+            raise Exception(response)
+        
+        response_json = response.json()
+
+        response_json = process_dependabot_alerts(response_json, threshold)
+
+        dependabot_data.extend(response_json)
+
+    return dependabot_data
+
+
+def get_dependabot_data(rest: github_api_toolkit.github_interface, org: str, dependabot_thresholds: dict) -> list[dict]:
+    """Gets the Dependabot data for all the repositories in an organization.
+
+    Args:
+        rest (github_api_toolkit.github_interface): The REST interface for the GitHub API.
+        org (str): The name of the GitHub organization.
+        dependabot_thresholds (dict): The thresholds for the Dependabot alerts from config.json.
+
+    Returns:
+        list[dict]: The Dependabot data for all the repositories in the organization.
+    """
+
+    dependabot_data = []
+
+    severities = dependabot_thresholds.keys()
+
+    threads = []
+
+    for severity in severities:
+
+        threshold = dependabot_thresholds[severity]
+
+        thread = custom_threading.CustomThread(target=get_dependabot_data_for_severity, args=(rest, org, severity, threshold))
+
+        threads.append(thread)
+
+        thread.start()
+
+    # Wait for all threads to finish
+    for thread in threads:
+        thread.join()
+
+        logger.log_info(f"{thread.name} processed {len(thread.return_value)} alerts.")
+
+        dependabot_data.extend(thread.return_value)
+
+    return dependabot_data
+
+
+def group_dependabot_data(dependabot_data: list[dict]) -> dict:
+
+    grouped_data = {}
+
+    for alert in dependabot_data:
+        
+        repository = alert["repository"]
+
+        ## TODO: Skip archived repositories
+
+        if repository not in grouped_data:
+            grouped_data[repository] = {
+                "url": alert["repository_url"],
+                "oldest_alert": 0,
+                "worst_severity": "none",
+                "alerts": {
+                    "critical": 0,
+                    "high": 0,
+                    "medium": 0,
+                    "low": 0
+                }
+            }
+
+        match alert["severity"]:
+            case "critical":
+                grouped_data[repository]["alerts"]["critical"] += 1
+            case "high":
+                grouped_data[repository]["alerts"]["high"] += 1
+            case "medium":
+                grouped_data[repository]["alerts"]["medium"] += 1
+            case "low":
+                grouped_data[repository]["alerts"]["low"] += 1
+
+        ## TODO: Update the oldest alert (days) and worst severity
+
+    return grouped_data
+
 
 start_time = time.time()
 
@@ -619,6 +892,10 @@ logger.log_info("Logger initialised.")
 # Get the environment variables
 
 org, app_client_id, aws_default_region, aws_secret_name, aws_account_name = get_environment_variables()
+
+## Calculate the S3 bucket information
+
+bucket_name = f"{aws_account_name}-policy-dashboard"
 
 logger.log_info("Environment variables loaded.")
 
@@ -652,6 +929,26 @@ logger.log_info("API interfaces created.")
 # pprint(rate_limit)
 # quit()
 
+# Initialise time variables
+
+repository_time = 0
+dependabot_time = 0
+secret_scanning_time = 0
+
+# Get write_to_s3 from the configuration file
+
+write_to_s3 = get_dict_value(features, "write_to_s3")
+
+
+# Get a list of non-archived repositories in the organization
+
+## This list is used to get repository information, dependabot information, and secret scanning information
+## This is so alerts for archived repositories are not collected
+## This also allows information collection to be modular and toggleable through config.json
+
+repositories, number_of_pages = get_repositories(logger, ql, org)
+
+
 # Get Repository Information
 ## Get, Process, and Store Repository Information
 
@@ -659,19 +956,24 @@ repository_collection = get_dict_value(features, "repository_collection")
 
 if repository_collection:
 
+    repository_start_time = time.time()
+
     logger.log_info("Repository collection enabled. Collecting repository data.")
 
     thread_count = get_dict_value(settings, "thread_count")
     inactivity_threshold = get_dict_value(settings, "inactivity_threshold")
     signed_commit_number = get_dict_value(settings, "signed_commit_number")
 
-    repositories, number_of_pages = get_repositories(logger, ql, org)
-
-    logger.log_info(f"Taken {time.time() - start_time} seconds to get GraphQL data.")
-
+    # Get the remaining data for the repositories and format it appropriately
     repository_data = get_output_data(logger, rest, ql, org, repositories, inactivity_threshold, signed_commit_number, thread_count)
 
-    logger.log_info(f"Taken {time.time() - start_time} seconds to get and merge REST data into QL data.")
+    logger.log_info(f"Taken {time.time() - repository_start_time} seconds repository information.")
+
+    # Upload Repository Data to S3
+
+    save_information(write_to_s3, "repositories.json", repository_data, s3, bucket_name)
+
+    repository_time = time.time() - repository_start_time
 
 else:
     logger.log_info("Repository collection disabled. Skipping repository data collection.")
@@ -681,23 +983,66 @@ else:
 
 dependabot_collection = get_dict_value(features, "dependabot_collection")
 
-# TODO: Implement
+if dependabot_collection:
+
+    dependabot_start_time = time.time()
+
+    logger.log_info("Dependabot collection enabled. Collecting Dependabot data.")
+
+    # Get Dependabot Thresholds
+    dependabot_thresholds = get_dict_value(settings, "dependabot_thresholds")
+
+    # Get Dependabot Data
+
+    dependabot_data = get_dependabot_data(rest, org, dependabot_thresholds)
+
+    logger.log_info(f"Taken {time.time() - dependabot_start_time} seconds to collect Dependabot data.")
+
+    # Group the data by repository and remove archived repositories
+
+    dependabot_data = group_dependabot_data(dependabot_data)
+
+    # Upload Dependabot Data to S3
+
+    save_information(write_to_s3, "dependabot.json", dependabot_data, s3, bucket_name)
+
+    dependabot_time = time.time() - dependabot_start_time
+
+else:
+    logger.log_info("Dependabot collection disabled. Skipping Dependabot data collection.")
 
 # Get Secret Scanning Information
 ## Get, Process, and Store Secret Scanning Information
 
 secret_scanning_collection = get_dict_value(features, "secret_scanning_collection")
 
-# TODO: Implement
+if secret_scanning_collection:
+    
+    secret_scanning_start_time = time.time()
+
+    logger.log_info("Secret Scanning collection enabled. Collecting Secret Scanning data.")
+
+    # Get Secret Scanning Data
+
+    secret_scanning_data = []
+
+    logger.log_info(f"Taken {time.time() - secret_scanning_start_time} seconds to collect Secret Scanning data.")
+
+    # Upload Secret Scanning Data to S3
+
+    save_information(write_to_s3, "secret_scanning.json", secret_scanning_data, s3, bucket_name)
+
+    secret_scanning_time = time.time() - secret_scanning_start_time
+
+else:
+    logger.log_info("Secret Scanning collection disabled. Skipping Secret Scanning data collection.")
 
 end_time = time.time()
 
-# print(f"Execution time: {end_time - start_time} seconds.")
-# print(f"Number of repositories: {len(repository_data)}")
-
-# with open("file.json", "w") as f:
-#     json.dump(repository_data, f, indent=4)
-
+logger.log_info(f"Script took {end_time - start_time} seconds to run.")
+logger.log_info(f"Repository collection took {repository_time} seconds.")
+logger.log_info(f"Dependabot collection took {dependabot_time} seconds.")
+logger.log_info(f"Secret Scanning collection took {secret_scanning_time} seconds.")
 
 def handler(event, context) -> str: # type: ignore[no-untyped-def]
 

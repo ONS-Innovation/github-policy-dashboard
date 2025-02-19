@@ -53,4 +53,4 @@ terraform/service/highest_priority.txt
 
 # Lambda Logs and Output
 debug.log
-file.json
+output/
