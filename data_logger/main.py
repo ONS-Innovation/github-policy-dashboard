@@ -372,7 +372,7 @@ def get_org_members(logger: wrapped_logging, rest: github_api_toolkit.github_int
 
     members = []
 
-    logger.log_info("Getting organisation members.")
+    logger.log_info("Getting organization members.")
 
     response = rest.get(f"/orgs/{org}/members", params={"per_page": 100})
 
@@ -398,7 +398,7 @@ def get_org_members(logger: wrapped_logging, rest: github_api_toolkit.github_int
         for member in response_json:
             members.append(member["login"])
 
-    logger.log_info(f"{len(members)} organisation members retrieved.")
+    logger.log_info(f"{len(members)} organization members retrieved.")
 
     return members
 
@@ -749,7 +749,7 @@ def process_dependabot_alerts(response_json: dict, threshold: int) -> list[dict]
 
     return dependabot_data
 
-def get_dependabot_data_for_severity(rest: github_api_toolkit.github_interface, org: str, severity: str, threshold: int) -> list[dict]:
+def get_dependabot_data_for_severity(logger: wrapped_logging, rest: github_api_toolkit.github_interface, org: str, severity: str, threshold: int, thread_name: str) -> list[dict]:
     """Gets the Dependabot data for all the repositories in an organization.
 
     Args:
@@ -758,6 +758,7 @@ def get_dependabot_data_for_severity(rest: github_api_toolkit.github_interface, 
         org (str): The name of the GitHub organization.
         severity (str): The severity of the Dependabot alerts to get.
         threshold (int): The number of days an alert has been open for before it is considered a problem.
+        thread_name (str): The name of the thread.
 
     Returns:
         list[dict]: The Dependabot data for all the repositories in the organization.
@@ -779,6 +780,8 @@ def get_dependabot_data_for_severity(rest: github_api_toolkit.github_interface, 
         last_page = 1
 
     for page in range(1, last_page + 1):
+        logger.log_info(f"Processing page {page} / {last_page} of Dependabot alerts for {severity} severity. Using {thread_name}.")
+
         response = rest.get(f"/orgs/{org}/dependabot/alerts", {"state": "open", "per_page": 100, "severity": severity, "page": page})
 
         if type(response) is not Response:
@@ -793,10 +796,11 @@ def get_dependabot_data_for_severity(rest: github_api_toolkit.github_interface, 
     return dependabot_data
 
 
-def get_dependabot_data(rest: github_api_toolkit.github_interface, org: str, dependabot_thresholds: dict) -> list[dict]:
+def get_dependabot_data(logger: wrapped_logging, rest: github_api_toolkit.github_interface, org: str, dependabot_thresholds: dict) -> list[dict]:
     """Gets the Dependabot data for all the repositories in an organization.
 
     Args:
+        logger (wrapped_logging): The logger object.
         rest (github_api_toolkit.github_interface): The REST interface for the GitHub API.
         org (str): The name of the GitHub organization.
         dependabot_thresholds (dict): The thresholds for the Dependabot alerts from config.json.
@@ -815,7 +819,9 @@ def get_dependabot_data(rest: github_api_toolkit.github_interface, org: str, dep
 
         threshold = dependabot_thresholds[severity]
 
-        thread = custom_threading.CustomThread(target=get_dependabot_data_for_severity, args=(rest, org, severity, threshold))
+        thread = custom_threading.CustomThread(target=get_dependabot_data_for_severity, args=(logger, rest, org, severity, threshold))
+
+        thread.add_arg(thread.name)
 
         threads.append(thread)
 
@@ -833,8 +839,28 @@ def get_dependabot_data(rest: github_api_toolkit.github_interface, org: str, dep
 
 
 def group_dependabot_data(dependabot_data: list[dict], repositories: list[dict], severity_map: dict) -> dict:
+    """Groups the Dependabot data by repository and calculates the total alerts, oldest alert and worst severity.
 
-    grouped_data = {}
+    Args:
+        dependabot_data (list[dict]): The Dependabot data for all the repositories in the organization.
+        repositories (list[dict]): The list of repositories in the organization.
+        severity_map (dict): The severity map for the Dependabot alerts.
+
+    Returns:
+        dict: The grouped Dependabot data.
+    """
+
+    grouped_data = {
+        "repositories": {},
+        "total_alerts": {
+            "critical": 0,
+            "high": 0,
+            "medium": 0,
+            "low": 0
+        },
+        "oldest_alert": 0,
+        "worst_severity": "none"
+    }
 
     for alert in dependabot_data:
         
@@ -845,8 +871,8 @@ def group_dependabot_data(dependabot_data: list[dict], repositories: list[dict],
         if not any(repo["name"] == repository for repo in repositories):
             continue
 
-        if repository not in grouped_data:
-            grouped_data[repository] = {
+        if repository not in grouped_data["repositories"]:
+            grouped_data["repositories"][repository] = {
                 "url": alert["repository_url"],
                 "oldest_alert": 0,
                 "worst_severity": "none",
@@ -858,37 +884,137 @@ def group_dependabot_data(dependabot_data: list[dict], repositories: list[dict],
                 }
             }
 
+        grouped_repository = grouped_data["repositories"][repository]
+
         # Increment the severity count for the repository
         match alert["severity"]:
             case "critical":
-                grouped_data[repository]["alerts"]["critical"] += 1
+                grouped_repository["alerts"]["critical"] += 1
+                grouped_data["total_alerts"]["critical"] += 1
             case "high":
-                grouped_data[repository]["alerts"]["high"] += 1
+                grouped_repository["alerts"]["high"] += 1
+                grouped_data["total_alerts"]["high"] += 1
             case "medium":
-                grouped_data[repository]["alerts"]["medium"] += 1
+                grouped_repository["alerts"]["medium"] += 1
+                grouped_data["total_alerts"]["medium"] += 1
             case "low":
-                grouped_data[repository]["alerts"]["low"] += 1
+                grouped_repository["alerts"]["low"] += 1
+                grouped_data["total_alerts"]["low"] += 1
 
         # Update the oldest alert (days)
         days_open = datetime.datetime.now() - datetime.datetime.strptime(alert["created_at"], "%Y-%m-%dT%H:%M:%SZ")
         days_open = days_open.days
 
-        if days_open > grouped_data[repository]["oldest_alert"]:
-            grouped_data[repository]["oldest_alert"] = days_open
+        if days_open > grouped_repository["oldest_alert"]:
+            grouped_repository["oldest_alert"] = days_open
 
         # Update the worst severity
         # This can be skipped if the severity is already critical (highest severity)
-        if grouped_data[repository]["worst_severity"] != "critical":
+        if grouped_repository["worst_severity"] != "critical":
 
             # If the worst severity is none, set it to the current alert severity (as none is the default value)
-            if grouped_data[repository]["worst_severity"] == "none":
-                grouped_data[repository]["worst_severity"] = alert["severity"]
+            if grouped_repository["worst_severity"] == "none":
+                grouped_repository["worst_severity"] = alert["severity"]
 
             # If the current alert severity is higher than the worst severity, update the worst severity
-            if severity_map[alert["severity"]] > severity_map[grouped_data[repository]["worst_severity"]]:
-                grouped_data[repository]["worst_severity"] = alert["severity"]
+            elif severity_map[alert["severity"]] > severity_map[grouped_repository["worst_severity"]]:
+                grouped_repository["worst_severity"] = alert["severity"]
+
+
+        # Update the oldest alert for whole dataset (days)
+        if days_open > grouped_data["oldest_alert"]:
+            grouped_data["oldest_alert"] = days_open
+
+        # Update the worst severity for whole dataset
+        # This can be skipped if the severity is already critical (highest severity)
+        if grouped_data["worst_severity"] != "critical":
+
+            # If the worst severity is none, set it to the current alert severity (as none is the default value)
+            if grouped_data["worst_severity"] == "none":
+                grouped_data["worst_severity"] = alert["severity"]
+
+            # If the current alert severity is higher than the worst severity, update the worst severity
+            elif severity_map[alert["severity"]] > severity_map[grouped_data[repository]["worst_severity"]]:
+                grouped_data["worst_severity"] = alert["severity"]
+
 
     return grouped_data
+
+
+def get_secret_scanning_data(logger: wrapped_logging, rest: github_api_toolkit.github_interface, org: str, threshold: int) -> dict:
+    """Gets the Secret Scanning alerts for an organization.
+
+    Args:
+        logger (wrapped_logging): The logger object.
+        rest (github_api_toolkit.github_interface): The REST interface for the GitHub API.
+        org (str): The name of the GitHub organization.
+        threshold (int): The number of days an alert has been open for before it is considered a problem.
+
+    Returns:
+        dict: The Secret Scanning data the organization.
+    """
+
+    secret_scanning_data = {
+        "repositories": {},
+        "total_alerts": 0,
+        "oldest_alert": 0
+    }
+
+    response = rest.get(f"/orgs/{org}/secret-scanning/alerts", {"state": "open","per_page": 100})
+
+    if type(response) is not Response:
+        raise Exception(response)
+    
+    try:
+        last_page = int(response.links["last"]["url"].split("=")[-1])
+    except KeyError:
+        last_page = 1
+
+    for page in range(1, last_page + 1):
+        logger.log_info(f"Processing page {page} / {last_page} of Secret Scanning alerts.")
+
+        response = rest.get(f"/orgs/{org}/secret-scanning/alerts", {"state": "open", "per_page": 100, "page": page})
+
+        if type(response) is not Response:
+            raise Exception(response)
+        
+        response_json = response.json()
+
+        for alert in response_json:
+
+            days_open = datetime.datetime.now() - datetime.datetime.strptime(alert["created_at"], "%Y-%m-%dT%H:%M:%SZ")
+            days_open = days_open.days
+
+            # If the alert has been open for less than the threshold, skip it
+            if days_open <= threshold:
+                continue
+
+            repository = alert["repository"]["name"]
+
+            if repository not in secret_scanning_data["repositories"]:
+                secret_scanning_data["repositories"][repository] = {
+                    "url": alert["repository"]["html_url"],
+                    "oldest_alert": 0,
+                    "alert_count": 0
+                }
+
+            data_repository = secret_scanning_data["repositories"][repository]
+
+            # Increment the alert count for the repository
+            data_repository["alert_count"] += 1
+
+            # Update the oldest alert (days)
+            if days_open > data_repository["oldest_alert"]:
+                data_repository["oldest_alert"] = days_open
+
+            # Update the total alert count for the whole dataset
+            secret_scanning_data["total_alerts"] += 1
+
+            # Update the oldest alert for the whole dataset (days)
+            if days_open > secret_scanning_data["oldest_alert"]:
+                secret_scanning_data["oldest_alert"] = days_open
+
+    return secret_scanning_data
 
 
 start_time = time.time()
@@ -1014,7 +1140,7 @@ if dependabot_collection:
 
     # Get Dependabot Data
 
-    dependabot_data = get_dependabot_data(rest, org, dependabot_thresholds)
+    dependabot_data = get_dependabot_data(logger, rest, org, dependabot_thresholds)
 
     logger.log_info(f"Taken {time.time() - dependabot_start_time} seconds to collect Dependabot data.")
 
@@ -1050,9 +1176,13 @@ if secret_scanning_collection:
 
     logger.log_info("Secret Scanning collection enabled. Collecting Secret Scanning data.")
 
+    # Get Secret Scanning Threshold
+
+    secret_scanning_threshold = get_dict_value(settings, "secret_scanning_threshold")
+
     # Get Secret Scanning Data
 
-    secret_scanning_data = []
+    secret_scanning_data = get_secret_scanning_data(logger, rest, org, secret_scanning_threshold)
 
     logger.log_info(f"Taken {time.time() - secret_scanning_start_time} seconds to collect Secret Scanning data.")
 
