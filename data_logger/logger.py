@@ -12,7 +12,7 @@ class wrapped_logging:
         self.logger.setLevel(logging.INFO)
 
         if debug:
-            logging.basicConfig(level=logging.DEBUG, filename="debug.log", filemode="w")
+            logging.basicConfig(filename="debug.log", filemode="w")
 
     def log_info(self, message: str) -> None:
         """Logs an info message to the logger.

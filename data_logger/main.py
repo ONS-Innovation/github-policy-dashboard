@@ -298,11 +298,10 @@ def get_repositories(
     return repositories, number_of_pages
 
 
-def get_rest_data(logger: wrapped_logging, rest: github_api_toolkit.github_interface, org: str, repository: str) -> dict:
+def get_rest_data(rest: github_api_toolkit.github_interface, org: str, repository: str) -> dict:
     """Gets the REST data for a repository (branch protection and secret scanning).
 
     Args:
-        logger (wrapped_logging): The logger object.
         rest (github_api_toolkit.github_interface): The REST interface for the GitHub API.
         org (str): The name of the GitHub organization.
         repository (str): The name of the repository.
@@ -315,8 +314,6 @@ def get_rest_data(logger: wrapped_logging, rest: github_api_toolkit.github_inter
     """
 
     checks = {}
-
-    logger.log_info(f"Getting REST data for {repository}.")
 
     # Get Branch Protection
 
@@ -354,8 +351,6 @@ def get_rest_data(logger: wrapped_logging, rest: github_api_toolkit.github_inter
             secret_scanning = False
 
     checks["secret_scanning"] = secret_scanning
-
-    logger.log_info(f"REST data for {repository} retrieved.")
 
     return checks
 
@@ -533,7 +528,7 @@ def get_remaining_data(ql: github_api_toolkit.github_graphql_interface, org: str
     return commits, pull_requests, contents
 
 
-def get_repository_batch(logger: wrapped_logging, rest: github_api_toolkit.github_interface, ql: github_api_toolkit.github_graphql_interface, org: str, repositories: list[dict], org_members: list[str], inactivity_threshold: int, max_commits: int, start: int, end: int) -> list[dict]:
+def get_repository_batch(logger: wrapped_logging, rest: github_api_toolkit.github_interface, ql: github_api_toolkit.github_graphql_interface, org: str, repositories: list[dict], org_members: list[str], inactivity_threshold: int, max_commits: int, start: int, end: int, thread_name: str) -> list[dict]:
     """Processes a batch of repositories.
 
     Args:
@@ -559,12 +554,14 @@ def get_repository_batch(logger: wrapped_logging, rest: github_api_toolkit.githu
     for i in range(start, end):
         repository = repositories[i]
 
+        logger.log_info(f"Processing repository {repository['name']} (index: {i}) using {thread_name}.")
+
         # Get outstanding QL Data (Signed Commits, External PRs and Repository Contents)
         commits, pull_requests, repository_contents = get_remaining_data(ql, org, repository["name"], max_commits)
 
         # Get REST Data (Branch Protection, Secret Scanning)
 
-        rest_data = get_rest_data(logger, rest, org, repository["name"])
+        rest_data = get_rest_data(rest, org, repository["name"])
 
         # Get Codeowners and Point of Contact
 
@@ -662,6 +659,8 @@ def get_output_data(logger: wrapped_logging, rest: github_api_toolkit.github_int
         start, end = group
 
         thread = custom_threading.CustomThread(target=get_repository_batch, args=(logger, rest, ql, org, repositories, org_members, inactivity_threshold, signed_commit_number, start, end))
+
+        thread.add_arg(thread.name)
 
         threads.append(thread)
 
