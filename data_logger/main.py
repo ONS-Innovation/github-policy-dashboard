@@ -679,10 +679,11 @@ def get_output_data(logger: wrapped_logging, rest: github_api_toolkit.github_int
     return output
 
 
-def save_information(write_to_s3: bool, filename: str, data: Any, s3: boto3.client = None, bucket_name: str = None):
+def save_information(logger: wrapped_logging, write_to_s3: bool, filename: str, data: Any, s3: boto3.client = None, bucket_name: str = None):
     """Saves information to a file.
 
     Args:
+        logger (wrapped_logging): The logger object.
         write_to_s3 (bool): Whether to write the information to S3 or locally.
         filename (str): The name of the file to save the information to.
         data (Any): The data to save (JSON ONLY).
@@ -1017,191 +1018,196 @@ def get_secret_scanning_data(logger: wrapped_logging, rest: github_api_toolkit.g
     return secret_scanning_data
 
 
-start_time = time.time()
-
-# Load the configuration file
-
-config_file_path = "./data_logger/config/config.json"
-config = get_config_file(config_file_path)
-
-features = get_dict_value(config, "features")
-settings = get_dict_value(config, "settings")
-
-# Initialise logging
-
-debug = get_dict_value(features, "show_log_locally")
-
-logger = wrapped_logging(debug)
-
-logger.log_info("Logger initialised.")
-
-# Get the environment variables
-
-org, app_client_id, aws_default_region, aws_secret_name, aws_account_name = get_environment_variables()
-
-## Calculate the S3 bucket information
-
-bucket_name = f"{aws_account_name}-policy-dashboard"
-
-logger.log_info("Environment variables loaded.")
-
-# Create Boto3 clients
-
-session = boto3.session.Session()
-
-## S3
-
-s3 = session.client("s3")
-
-logger.log_info("S3 client created.")
-
-## Secret Manager
-
-secret_manager = session.client(service_name="secretsmanager", region_name=aws_default_region)
-
-logger.log_info("Secret Manager client created.")
-
-# Setup API Interfaces (REST and GraphQL)
-
-token = get_access_token(secret_manager, aws_secret_name, org, app_client_id)
-
-ql = github_api_toolkit.github_graphql_interface(token[0])
-rest = github_api_toolkit.github_interface(token[0])
-
-logger.log_info("API interfaces created.")
-
-# # Dev code to check GitHub Rate Limit
-# rate_limit = rest.get("/rate_limit").json()
-# pprint(rate_limit)
-# quit()
-
-# Initialise time variables
-
-repository_time = 0
-dependabot_time = 0
-secret_scanning_time = 0
-
-# Get write_to_s3 from the configuration file
-
-write_to_s3 = get_dict_value(features, "write_to_s3")
-
-
-# Get a list of non-archived repositories in the organization
-
-## This list is used to get repository information, dependabot information, and secret scanning information
-## This is so alerts for archived repositories are not collected
-## This also allows information collection to be modular and toggleable through config.json
-
-repositories, number_of_pages = get_repositories(logger, ql, org)
-
-
-# Get Repository Information
-## Get, Process, and Store Repository Information
-
-repository_collection = get_dict_value(features, "repository_collection")
-
-if repository_collection:
-
-    repository_start_time = time.time()
-
-    logger.log_info("Repository collection enabled. Collecting repository data.")
-
-    thread_count = get_dict_value(settings, "thread_count")
-    inactivity_threshold = get_dict_value(settings, "inactivity_threshold")
-    signed_commit_number = get_dict_value(settings, "signed_commit_number")
-
-    # Get the remaining data for the repositories and format it appropriately
-    repository_data = get_output_data(logger, rest, ql, org, repositories, inactivity_threshold, signed_commit_number, thread_count)
-
-    logger.log_info(f"Taken {time.time() - repository_start_time} seconds repository information.")
-
-    # Upload Repository Data to S3
-
-    save_information(write_to_s3, "repositories.json", repository_data, s3, bucket_name)
-
-    repository_time = time.time() - repository_start_time
-
-else:
-    logger.log_info("Repository collection disabled. Skipping repository data collection.")
-
-# Get Dependabot Information
-## Get, Process, and Store Dependabot Information
-
-dependabot_collection = get_dict_value(features, "dependabot_collection")
-
-if dependabot_collection:
-
-    dependabot_start_time = time.time()
-
-    logger.log_info("Dependabot collection enabled. Collecting Dependabot data.")
-
-    # Get Dependabot Thresholds
-    dependabot_thresholds = get_dict_value(settings, "dependabot_thresholds")
-
-    # Get Dependabot Data
-
-    dependabot_data = get_dependabot_data(logger, rest, org, dependabot_thresholds)
-
-    logger.log_info(f"Taken {time.time() - dependabot_start_time} seconds to collect Dependabot data.")
-
-    # Group the data by repository and remove archived repositories
-
-    # Maps the severity to a number for comparison
-    severity_map = {
-        "critical": 4,
-        "high": 3,
-        "medium": 2,
-        "low": 1
-    }
-
-    dependabot_data = group_dependabot_data(dependabot_data, repositories, severity_map)
-
-    # Upload Dependabot Data to S3
-
-    save_information(write_to_s3, "dependabot.json", dependabot_data, s3, bucket_name)
-
-    dependabot_time = time.time() - dependabot_start_time
-
-else:
-    logger.log_info("Dependabot collection disabled. Skipping Dependabot data collection.")
-
-# Get Secret Scanning Information
-## Get, Process, and Store Secret Scanning Information
-
-secret_scanning_collection = get_dict_value(features, "secret_scanning_collection")
-
-if secret_scanning_collection:
-    
-    secret_scanning_start_time = time.time()
-
-    logger.log_info("Secret Scanning collection enabled. Collecting Secret Scanning data.")
-
-    # Get Secret Scanning Threshold
-
-    secret_scanning_threshold = get_dict_value(settings, "secret_scanning_threshold")
-
-    # Get Secret Scanning Data
-
-    secret_scanning_data = get_secret_scanning_data(logger, rest, org, secret_scanning_threshold)
-
-    logger.log_info(f"Taken {time.time() - secret_scanning_start_time} seconds to collect Secret Scanning data.")
-
-    # Upload Secret Scanning Data to S3
-
-    save_information(write_to_s3, "secret_scanning.json", secret_scanning_data, s3, bucket_name)
-
-    secret_scanning_time = time.time() - secret_scanning_start_time
-
-else:
-    logger.log_info("Secret Scanning collection disabled. Skipping Secret Scanning data collection.")
-
-end_time = time.time()
-
-logger.log_info(f"Script took {end_time - start_time} seconds to run.")
-logger.log_info(f"Repository collection took {repository_time} seconds.")
-logger.log_info(f"Dependabot collection took {dependabot_time} seconds.")
-logger.log_info(f"Secret Scanning collection took {secret_scanning_time} seconds.")
-
 def handler(event, context) -> str: # type: ignore[no-untyped-def]
 
-    return "Hello, World!"
+    start_time = time.time()
+
+    # Load the configuration file
+
+    config_file_path = "./data_logger/config/config.json"
+    config = get_config_file(config_file_path)
+
+    features = get_dict_value(config, "features")
+    settings = get_dict_value(config, "settings")
+
+    # Initialise logging
+
+    debug = get_dict_value(features, "show_log_locally")
+
+    logger = wrapped_logging(debug)
+
+    logger.log_info("Logger initialised.")
+
+    # Get the environment variables
+
+    org, app_client_id, aws_default_region, aws_secret_name, aws_account_name = get_environment_variables()
+
+    ## Calculate the S3 bucket information
+
+    bucket_name = f"{aws_account_name}-policy-dashboard"
+
+    logger.log_info("Environment variables loaded.")
+
+    # Create Boto3 clients
+
+    session = boto3.session.Session()
+
+    ## S3
+
+    s3 = session.client("s3")
+
+    logger.log_info("S3 client created.")
+
+    ## Secret Manager
+
+    secret_manager = session.client(service_name="secretsmanager", region_name=aws_default_region)
+
+    logger.log_info("Secret Manager client created.")
+
+    # Setup API Interfaces (REST and GraphQL)
+
+    token = get_access_token(secret_manager, aws_secret_name, org, app_client_id)
+
+    ql = github_api_toolkit.github_graphql_interface(token[0])
+    rest = github_api_toolkit.github_interface(token[0])
+
+    logger.log_info("API interfaces created.")
+
+    # # Dev code to check GitHub Rate Limit
+    # rate_limit = rest.get("/rate_limit").json()
+    # pprint(rate_limit)
+    # quit()
+
+    # Initialise time variables
+
+    repository_time = 0
+    dependabot_time = 0
+    secret_scanning_time = 0
+
+    # Get write_to_s3 from the configuration file
+
+    write_to_s3 = get_dict_value(features, "write_to_s3")
+
+
+    # Get a list of non-archived repositories in the organization
+
+    ## This list is used to get repository information, dependabot information, and secret scanning information
+    ## This is so alerts for archived repositories are not collected
+    ## This also allows information collection to be modular and toggleable through config.json
+
+    repositories, number_of_pages = get_repositories(logger, ql, org)
+
+
+    # Get Repository Information
+    ## Get, Process, and Store Repository Information
+
+    repository_collection = get_dict_value(features, "repository_collection")
+
+    if repository_collection:
+
+        repository_start_time = time.time()
+
+        logger.log_info("Repository collection enabled. Collecting repository data.")
+
+        thread_count = get_dict_value(settings, "thread_count")
+        inactivity_threshold = get_dict_value(settings, "inactivity_threshold")
+        signed_commit_number = get_dict_value(settings, "signed_commit_number")
+
+        # Get the remaining data for the repositories and format it appropriately
+        repository_data = get_output_data(logger, rest, ql, org, repositories, inactivity_threshold, signed_commit_number, thread_count)
+
+        logger.log_info(f"Taken {time.time() - repository_start_time} seconds repository information.")
+
+        # Upload Repository Data to S3
+
+        save_information(logger, write_to_s3, "repositories.json", repository_data, s3, bucket_name)
+
+        repository_time = time.time() - repository_start_time
+
+    else:
+        logger.log_info("Repository collection disabled. Skipping repository data collection.")
+
+    # Get Dependabot Information
+    ## Get, Process, and Store Dependabot Information
+
+    dependabot_collection = get_dict_value(features, "dependabot_collection")
+
+    if dependabot_collection:
+
+        dependabot_start_time = time.time()
+
+        logger.log_info("Dependabot collection enabled. Collecting Dependabot data.")
+
+        # Get Dependabot Thresholds
+        dependabot_thresholds = get_dict_value(settings, "dependabot_thresholds")
+
+        # Get Dependabot Data
+
+        dependabot_data = get_dependabot_data(logger, rest, org, dependabot_thresholds)
+
+        logger.log_info(f"Taken {time.time() - dependabot_start_time} seconds to collect Dependabot data.")
+
+        # Group the data by repository and remove archived repositories
+
+        # Maps the severity to a number for comparison
+        severity_map = {
+            "critical": 4,
+            "high": 3,
+            "medium": 2,
+            "low": 1
+        }
+
+        dependabot_data = group_dependabot_data(dependabot_data, repositories, severity_map)
+
+        # Upload Dependabot Data to S3
+
+        save_information(logger, write_to_s3, "dependabot.json", dependabot_data, s3, bucket_name)
+
+        dependabot_time = time.time() - dependabot_start_time
+
+    else:
+        logger.log_info("Dependabot collection disabled. Skipping Dependabot data collection.")
+
+    # Get Secret Scanning Information
+    ## Get, Process, and Store Secret Scanning Information
+
+    secret_scanning_collection = get_dict_value(features, "secret_scanning_collection")
+
+    if secret_scanning_collection:
+        
+        secret_scanning_start_time = time.time()
+
+        logger.log_info("Secret Scanning collection enabled. Collecting Secret Scanning data.")
+
+        # Get Secret Scanning Threshold
+
+        secret_scanning_threshold = get_dict_value(settings, "secret_scanning_threshold")
+
+        # Get Secret Scanning Data
+
+        secret_scanning_data = get_secret_scanning_data(logger, rest, org, secret_scanning_threshold)
+
+        logger.log_info(f"Taken {time.time() - secret_scanning_start_time} seconds to collect Secret Scanning data.")
+
+        # Upload Secret Scanning Data to S3
+
+        save_information(logger, write_to_s3, "secret_scanning.json", secret_scanning_data, s3, bucket_name)
+
+        secret_scanning_time = time.time() - secret_scanning_start_time
+
+    else:
+        logger.log_info("Secret Scanning collection disabled. Skipping Secret Scanning data collection.")
+
+    end_time = time.time()
+
+    logger.log_info(f"Script took {end_time - start_time} seconds to run.")
+    logger.log_info(f"Repository collection took {repository_time} seconds.")
+    logger.log_info(f"Dependabot collection took {dependabot_time} seconds.")
+    logger.log_info(f"Secret Scanning collection took {secret_scanning_time} seconds.")
+
+    return f"Script ran successfully in {end_time - start_time} seconds."
+
+
+# Dev code to run the script locally without containerisation
+# if __name__ == "__main__":
+#     print(handler(None, None))
