@@ -5,7 +5,6 @@ import time
 from functools import wraps
 import boto3
 from requests import Response
-from pprint import pprint
 import datetime
 
 import github_api_toolkit
@@ -1072,11 +1071,6 @@ def handler(event, context) -> str: # type: ignore[no-untyped-def]
     rest = github_api_toolkit.github_interface(token[0])
 
     logger.log_info("API interfaces created.")
-
-    # # Dev code to check GitHub Rate Limit
-    # rate_limit = rest.get("/rate_limit").json()
-    # pprint(rate_limit)
-    # quit()
 
     # Initialise time variables
 

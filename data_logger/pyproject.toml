@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "policy-data-logger"
+version = "0.1.0"
+description = "An AWS Lambda function to collect a range of policy information from the GitHub API"
+authors = ["Kieran Pritchard <kieran.pritchard@ons.gov.uk>"]
+readme = "README.md"
+
+
+[tool.poetry.dependencies]
+python = "^3.12"
+boto3 = "^1.36.26"
+requests = "^2.32.3"
+github-api-toolkit = {git = "https://github.com/ONS-Innovation/github-api-package.git", rev = "v2.0.2"}
+jwt = "^1.3.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+package-mode = "false"
