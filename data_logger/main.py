@@ -298,7 +298,7 @@ def get_repositories(
 
 
 def get_rest_data(rest: github_api_toolkit.github_interface, org: str, repository: str) -> dict:
-    """Gets the REST data for a repository (branch protection and secret scanning).
+    """Gets the REST data for a repository (branch protection secret scanning and push protection).
 
     Args:
         rest (github_api_toolkit.github_interface): The REST interface for the GitHub API.
@@ -350,6 +350,16 @@ def get_rest_data(rest: github_api_toolkit.github_interface, org: str, repositor
             secret_scanning = False
 
     checks["secret_scanning"] = secret_scanning
+
+    # Get Push Protection
+
+    push_protection = True
+
+    if response_json["visibility"] == "public":
+        if response_json["security_and_analysis"]["secret_scanning_push_protection"]["status"] == "disabled":
+            push_protection = False
+
+    checks["push_protection"] = push_protection
 
     return checks
 
@@ -608,6 +618,7 @@ def get_repository_batch(logger: wrapped_logging, rest: github_api_toolkit.githu
                 "external_pr": policy_checks.has_external_pr(pull_requests, org_members),
                 "breaks_naming_convention": policy_checks.breaks_naming_convention(repository["name"]),
                 "secret_scanning_disabled": not rest_data["secret_scanning"],
+                "push_protection_disabled": not rest_data["push_protection"],
                 "dependabot_disabled": not repository["hasVulnerabilityAlertsEnabled"],
                 "codeowners_missing": codeowners_missing,
                 "point_of_contact_missing": point_of_contact_missing
