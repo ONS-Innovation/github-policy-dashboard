@@ -1034,7 +1034,7 @@ def handler(event, context) -> str: # type: ignore[no-untyped-def]
 
     # Load the configuration file
 
-    config_file_path = "./data_logger/config/config.json"
+    config_file_path = "./config/config.json"
     config = get_config_file(config_file_path)
 
     features = get_dict_value(config, "features")

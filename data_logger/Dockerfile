@@ -21,7 +21,7 @@ COPY ./pyproject.toml ./poetry.lock ${LAMBDA_TASK_ROOT}/
 
 # Install the dependencies
 WORKDIR ${LAMBDA_TASK_ROOT}
-RUN pip install --no-cache-dir poetry==1.5.0 &&\
+RUN pip install --no-cache-dir poetry==1.8.3 &&\
     poetry config virtualenvs.create false &&\ 
     poetry install
 
@@ -34,4 +34,4 @@ COPY main.py logger.py policy_checks.py custom_threading.py ${LAMBDA_TASK_ROOT}/
 HEALTHCHECK NONE
 
 # Set the CMD to your handler (could also be done as a parameter override outside of the Dockerfile)
-CMD [ "src.main.handler" ]
+CMD [ "main.handler" ]
