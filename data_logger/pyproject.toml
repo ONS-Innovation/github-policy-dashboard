@@ -1,10 +1,9 @@
 [tool.poetry]
-name = "policy-data-logger"
+name = "src"
 version = "0.1.0"
 description = "An AWS Lambda function to collect a range of policy information from the GitHub API"
 authors = ["Kieran Pritchard <kieran.pritchard@ons.gov.uk>"]
 readme = "README.md"
-package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.12"

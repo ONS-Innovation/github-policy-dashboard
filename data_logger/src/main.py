@@ -9,9 +9,9 @@ import datetime
 
 import github_api_toolkit
 
-import custom_threading
-from logger import wrapped_logging
-import policy_checks
+import src.custom_threading as custom_threading
+from src.logger import wrapped_logging
+import src.policy_checks as policy_checks
 
 
 T = TypeVar("T")
@@ -1220,5 +1220,5 @@ def handler(event, context) -> str: # type: ignore[no-untyped-def]
 
 
 # Dev code to run the script locally without containerisation
-if __name__ == "__main__":
-    print(handler(None, None))
+# if __name__ == "__main__":
+#     print(handler(None, None))

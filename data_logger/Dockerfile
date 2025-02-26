@@ -29,9 +29,9 @@ RUN pip install --no-cache-dir poetry==1.8.3 &&\
 COPY config ${LAMBDA_TASK_ROOT}/config
 
 # Copy function code
-COPY main.py logger.py policy_checks.py custom_threading.py ${LAMBDA_TASK_ROOT}/
+COPY src/main.py src/logger.py src/policy_checks.py src/custom_threading.py ${LAMBDA_TASK_ROOT}/src/
 
 HEALTHCHECK NONE
 
 # Set the CMD to your handler (could also be done as a parameter override outside of the Dockerfile)
-CMD [ "main.handler" ]
+CMD [ "src.main.handler" ]
