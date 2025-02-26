@@ -94,6 +94,9 @@ def load_secret_scanning(_s3, load_date: datetime.date) -> pd.DataFrame | str:
     total_alerts = json_data.get("total_alerts", 0)
     oldest_alert = json_data.get("oldest_alert", 0)
 
+    if oldest_alert != 0:
+        oldest_alert = (datetime.now() - datetime.strptime(oldest_alert, "%Y-%m-%dT%H:%M:%SZ")).days
+
     repositories_list = json_data.get("repositories", [])
 
     rows = []
@@ -103,6 +106,9 @@ def load_secret_scanning(_s3, load_date: datetime.date) -> pd.DataFrame | str:
         repository_oldest_alert = repositories_list[repository].get("oldest_alert", 0)
         repository_total_alerts = repositories_list[repository].get("alert_count", 0)
         repository_link = repositories_list[repository].get("url", "N/A")
+
+        if repository_oldest_alert != 0:
+            repository_oldest_alert = (datetime.now() - datetime.strptime(repository_oldest_alert, "%Y-%m-%dT%H:%M:%SZ")).days
 
         rows.append(
             {
@@ -144,6 +150,9 @@ def load_dependabot(_s3, load_date: datetime.date) -> pd.DataFrame | str:
     oldest_alert = json_data.get("oldest_alert", 0)
     worst_severity = json_data.get("worst_severity", "N/A")
 
+    if oldest_alert != 0:
+        oldest_alert = (datetime.now() - datetime.strptime(oldest_alert, "%Y-%m-%dT%H:%M:%SZ")).days
+
     df_total_alerts = pd.json_normalize(json_data.get("total_alerts", []))
 
     rows = []
@@ -157,6 +166,9 @@ def load_dependabot(_s3, load_date: datetime.date) -> pd.DataFrame | str:
         repository_medium_alerts = json_data["repositories"][repository]["alerts"].get("medium", 0)
         repository_low_alerts = json_data["repositories"][repository]["alerts"].get("low", 0)
         repository_link = json_data["repositories"][repository].get("url", "N/A")
+
+        if repository_oldest_alert != 0:
+            repository_oldest_alert = (datetime.now() - datetime.strptime(repository_oldest_alert, "%Y-%m-%dT%H:%M:%SZ")).days
 
         rows.append(
             {

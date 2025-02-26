@@ -869,7 +869,7 @@ def group_dependabot_data(dependabot_data: list[dict], repositories: list[dict],
             "medium": 0,
             "low": 0
         },
-        "oldest_alert": 0,
+        "oldest_alert": "3000-01-01T00:00:00Z",
         "worst_severity": "none"
     }
 
@@ -885,7 +885,7 @@ def group_dependabot_data(dependabot_data: list[dict], repositories: list[dict],
         if repository not in grouped_data["repositories"]:
             grouped_data["repositories"][repository] = {
                 "url": alert["repository_url"],
-                "oldest_alert": 0,
+                "oldest_alert": "3000-01-01T00:00:00Z",
                 "worst_severity": "none",
                 "alerts": {
                     "critical": 0,
@@ -916,8 +916,11 @@ def group_dependabot_data(dependabot_data: list[dict], repositories: list[dict],
         days_open = datetime.datetime.now() - datetime.datetime.strptime(alert["created_at"], "%Y-%m-%dT%H:%M:%SZ")
         days_open = days_open.days
 
-        if days_open > grouped_repository["oldest_alert"]:
-            grouped_repository["oldest_alert"] = days_open
+        repository_oldest_alert = (datetime.datetime.now() - datetime.datetime.strptime(grouped_repository["oldest_alert"], "%Y-%m-%dT%H:%M:%SZ")).days
+        dataset_oldest_alert = (datetime.datetime.now() - datetime.datetime.strptime(grouped_data["oldest_alert"], "%Y-%m-%dT%H:%M:%SZ")).days
+
+        if days_open > repository_oldest_alert:
+            grouped_repository["oldest_alert"] = alert["created_at"]
 
         # Update the worst severity
         # This can be skipped if the severity is already critical (highest severity)
@@ -933,8 +936,8 @@ def group_dependabot_data(dependabot_data: list[dict], repositories: list[dict],
 
 
         # Update the oldest alert for whole dataset (days)
-        if days_open > grouped_data["oldest_alert"]:
-            grouped_data["oldest_alert"] = days_open
+        if days_open > dataset_oldest_alert:
+            grouped_data["oldest_alert"] = alert["created_at"]
 
         # Update the worst severity for whole dataset
         # This can be skipped if the severity is already critical (highest severity)
@@ -968,7 +971,7 @@ def get_secret_scanning_data(logger: wrapped_logging, rest: github_api_toolkit.g
     secret_scanning_data = {
         "repositories": {},
         "total_alerts": 0,
-        "oldest_alert": 0
+        "oldest_alert": "3000-01-01T00:00:00Z"
     }
 
     response = rest.get(f"/orgs/{org}/secret-scanning/alerts", {"state": "open","per_page": 100})
@@ -1005,25 +1008,28 @@ def get_secret_scanning_data(logger: wrapped_logging, rest: github_api_toolkit.g
             if repository not in secret_scanning_data["repositories"]:
                 secret_scanning_data["repositories"][repository] = {
                     "url": alert["repository"]["html_url"],
-                    "oldest_alert": 0,
+                    "oldest_alert": "3000-01-01T00:00:00Z",
                     "alert_count": 0
                 }
 
             data_repository = secret_scanning_data["repositories"][repository]
 
+            repository_oldest_alert = (datetime.datetime.now() - datetime.datetime.strptime(data_repository["oldest_alert"], "%Y-%m-%dT%H:%M:%SZ")).days
+            dataset_oldest_alert = (datetime.datetime.now() - datetime.datetime.strptime(secret_scanning_data["oldest_alert"], "%Y-%m-%dT%H:%M:%SZ")).days
+
             # Increment the alert count for the repository
             data_repository["alert_count"] += 1
 
             # Update the oldest alert (days)
-            if days_open > data_repository["oldest_alert"]:
-                data_repository["oldest_alert"] = days_open
+            if days_open > repository_oldest_alert:
+                data_repository["oldest_alert"] = alert["created_at"]
 
             # Update the total alert count for the whole dataset
             secret_scanning_data["total_alerts"] += 1
 
             # Update the oldest alert for the whole dataset (days)
-            if days_open > secret_scanning_data["oldest_alert"]:
-                secret_scanning_data["oldest_alert"] = days_open
+            if days_open > dataset_oldest_alert:
+                secret_scanning_data["oldest_alert"] = alert["created_at"]
 
     return secret_scanning_data
 
@@ -1214,5 +1220,5 @@ def handler(event, context) -> str: # type: ignore[no-untyped-def]
 
 
 # Dev code to run the script locally without containerisation
-# if __name__ == "__main__":
-#     print(handler(None, None))
+if __name__ == "__main__":
+    print(handler(None, None))
