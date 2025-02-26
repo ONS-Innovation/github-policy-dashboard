@@ -208,10 +208,6 @@ df_repositories = load_repositories(s3, loading_date)
 total_secret_alerts, oldest_secret_alert, df_secret_scanning = load_secret_scanning(s3, loading_date)
 df_total_dependabot_alerts, oldest_dependabot_alert, worst_severity_dependabot, df_dependabot = load_dependabot(s3, loading_date)
 
-st.dataframe(df_secret_scanning)
-st.dataframe(df_dependabot)
-st.dataframe(df_total_dependabot_alerts)
-
 rulemap = load_file("rulemap.json")
 
 if type(df_repositories) == str:
