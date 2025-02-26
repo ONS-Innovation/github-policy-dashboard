@@ -223,6 +223,16 @@ if type(df_dependabot) == str:
     st.stop()
 
 
+# Add Repository Type to dependabot data using the repository data
+for repository in df_dependabot["Name"]:
+    repository_type = df_repositories.loc[df_repositories["name"] == repository, "type"].values
+
+    if len(repository_type) > 0:
+        df_dependabot.loc[df_dependabot["Name"] == repository, "Type"] = repository_type[0]
+    else:
+        df_dependabot.loc[df_dependabot["Name"] == repository, "Type"] = "N/A"
+
+
 col1, col2 = st.columns([0.8, 0.2])
 
 col1.title(":blue-background[GitHub Policy Dashboard]")
@@ -316,7 +326,7 @@ with repository_tab:
 
         # Filter the DataFrame by the selected repository type
         if repository_type != "all":
-            df_repositories = df_repositories.loc[df_repositories["repository_type"] == repository_type]
+            df_repositories = df_repositories.loc[df_repositories["repository_type"] == repository_type.upper()]
 
         # Filter the DataFrame by the selected date range
         df_repositories["created_at"] = pd.to_datetime(df_repositories["created_at"], errors="coerce").dt.tz_localize(
@@ -527,13 +537,17 @@ with secret_tab:
     st.header(":blue-background[Secret Scanning Analysis]")
     st.write("Alerts open for more than 5 days.")
 
-    col1, col2, col3 = st.columns([0.3, 0.3, 0.4])
+    col1, col2, col3, col4 = st.columns(4)
 
     col1.metric("Total Alerts", total_secret_alerts)
     col2.metric("Oldest Alert", oldest_secret_alert)
+    col3.metric("Number of Repositories", len(df_secret_scanning))
+    col4.metric("Average Alerts per Repository", round(total_secret_alerts / len(df_secret_scanning)))
 
-    # Metric with repository with most alerts
-    col3.metric("Repository with Most Alerts", df_secret_scanning["Name"].iloc[df_secret_scanning["Total Alerts"].idxmax()])
+    col1, col2 = st.columns([0.7, 0.3])
+
+    col1.metric("Repository with Most Alerts", df_secret_scanning["Name"].iloc[df_secret_scanning["Total Alerts"].idxmax()])
+    col2.metric("Number of Repository Alerts", df_secret_scanning["Total Alerts"].max())
 
     # Pie chart showing the number of alerts by repository
 
@@ -561,11 +575,53 @@ with dependabot_tab:
     st.header(":blue-background[Dependabot Analysis]")
     st.write("Alerts open for more than 5 days (Critical), 15 days (High), 60 days (Medium), 90 days (Low).")
 
-    col1, col2, col3 = st.columns(3)
+    # Data filters
+
+    col1, col2 = st.columns([0.7, 0.3])
+
+    ## Severity Filter
+
+    severity_list = ["Critical", "High", "Medium", "Low"]
+
+    selected_severities = col1.multiselect("Select Severities", severity_list, severity_list)
+
+    if len(selected_severities) == 0:
+        st.info("Please select at least one severity to see metrics.")
+        st.stop()
+
+    severities_to_exclude = []
+
+    for severity in severity_list:
+        if severity not in selected_severities:
+            severities_to_exclude.append(severity)
+
+    for severity in severities_to_exclude:
+        df_dependabot[severity + " Alerts"] = 0
+
+        severity = severity.lower()
+
+        df_total_dependabot_alerts[severity] = 0
+
+    df_dependabot["Total Alerts"] = df_dependabot["Critical Alerts"] + df_dependabot["High Alerts"] + df_dependabot["Medium Alerts"] + df_dependabot["Low Alerts"]
+
+    # Remove repositories with no alerts
+    df_dependabot = df_dependabot.loc[df_dependabot["Total Alerts"] > 0]
+
+    ## Repository Type Filter
+
+    type_list = ["all", "public", "private", "internal"]
+
+    selected_type = col2.selectbox("Select Repository Type", type_list)
+
+    if selected_type != "all":
+        df_dependabot = df_dependabot.loc[df_dependabot["Type"] == selected_type.upper()]
+
+    col1, col2, col3, col4 = st.columns(4)
 
     col1.metric("Total Alerts", df_total_dependabot_alerts.iloc[0].sum(axis=0))
     col2.metric("Oldest Alert", oldest_dependabot_alert)
     col3.metric("Worst Severity", worst_severity_dependabot)
+    col4.metric("Number of Repositories", len(df_dependabot))
 
     col1, col2, col3, col4 = st.columns(4)
 
@@ -588,14 +644,12 @@ with dependabot_tab:
 
     st.plotly_chart(fig)
 
-    df_dependabot["Total Alerts"] = df_dependabot["Critical Alerts"] + df_dependabot["High Alerts"] + df_dependabot["Medium Alerts"] + df_dependabot["Low Alerts"]
-
     # Hide the columns that are not needed
     df_dependabot_filtered = df_dependabot.drop(columns=["Critical Alerts", "High Alerts", "Medium Alerts", "Low Alerts"])
 
     selected_repo = st.dataframe(
         df_dependabot_filtered,
-        column_order=["Name", "Oldest Alert", "Worst Severity", "Total Alerts", "Link"],
+        column_order=["Name", "Type", "Oldest Alert", "Worst Severity", "Total Alerts", "Link"],
         use_container_width=True, 
         hide_index=True,
         column_config={
