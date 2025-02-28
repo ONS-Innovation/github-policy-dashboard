@@ -51,6 +51,8 @@ terraform.rc
 # Ignore the terraform/service prority calc
 terraform/service/highest_priority.txt
 
+.terraform.lock.hcl
+
 # Lambda Logs and Output
 debug.log
 output/
