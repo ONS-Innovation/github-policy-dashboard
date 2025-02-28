@@ -1,5 +1,35 @@
-# GitHub Audit Dashboard
+# GitHub Policy Dashboard
 A dashboard which uses organisation data from the GitHub API to monitor how well policy is adhered to in ONS.
+
+## Overview
+
+This repository contains 2 main elements:
+
+- A Streamlit Dashboard to visualise policy data from S3.
+- An AWS Lambda Data Logger to collect information from GitHub to be used by the dashboard.
+
+## Table of Contents
+
+- [GitHub Policy Dashboard](#github-policy-dashboard)
+  - [Overview](#overview)
+  - [Table of Contents](#table-of-contents)
+  - [Prerequisites](#prerequisites)
+  - [Documentation](#documentation)
+  - [Setup - Run outside of Docker](#setup---run-outside-of-docker)
+  - [Setup - Running in a container](#setup---running-in-a-container)
+  - [Storing the container on AWS Elastic Container Registry (ECR)](#storing-the-container-on-aws-elastic-container-registry-ecr)
+  - [Deployment to AWS](#deployment-to-aws)
+    - [Deployment Prerequisites](#deployment-prerequisites)
+      - [Underlying AWS Infrastructure](#underlying-aws-infrastructure)
+      - [Bootstrap IAM User Groups, Users and an ECSTaskExecutionRole](#bootstrap-iam-user-groups-users-and-an-ecstaskexecutionrole)
+      - [Bootstrap for Terraform](#bootstrap-for-terraform)
+      - [Running the Terraform](#running-the-terraform)
+      - [Provision Users](#provision-users)
+    - [Updating the running service using Terraform](#updating-the-running-service-using-terraform)
+    - [Destroy the Main Service Resources](#destroy-the-main-service-resources)
+  - [Linting and Formatting](#linting-and-formatting)
+  - [Future Development](#future-development)
+
 
 ## Prerequisites
 This project uses poetry for package management and colima/docker for containerisation.
@@ -345,3 +375,12 @@ To run mypy (static type checking)
 ```bash
 make mypy
 ```
+
+## Future Development
+
+This repository still needs the following implemented:
+
+- Linting
+- Testing to a 95% coverage
+- MkDocs documentation refactor / rewrite
+- General repository clean up
