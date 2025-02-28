@@ -551,15 +551,15 @@ with secret_tab:
 
     col1, col2, col3, col4 = st.columns(4)
 
-    col1.metric("Total Alerts", total_secret_alerts)
-    col2.metric("Oldest Alert", oldest_secret_alert)
-    col3.metric("Number of Repositories", len(df_secret_scanning))
-    col4.metric("Average Alerts per Repository", round(total_secret_alerts / len(df_secret_scanning)))
+    col1.metric("Total Alerts", total_secret_alerts, border=True)
+    col2.metric("Oldest Alert", oldest_secret_alert, border=True)
+    col3.metric("Number of Repositories", len(df_secret_scanning), border=True)
+    col4.metric("Average Alerts per Repository", round(total_secret_alerts / len(df_secret_scanning)), border=True)
 
     col1, col2 = st.columns([0.7, 0.3])
 
-    col1.metric("Repository with Most Alerts", df_secret_scanning["Name"].iloc[df_secret_scanning["Total Alerts"].idxmax()])
-    col2.metric("Number of Repository Alerts", df_secret_scanning["Total Alerts"].max())
+    col1.metric("Repository with Most Alerts", df_secret_scanning["Name"].iloc[df_secret_scanning["Total Alerts"].idxmax()], border=True)
+    col2.metric("Number of Repository Alerts", df_secret_scanning["Total Alerts"].max(), border=True)
 
     # Pie chart showing the number of alerts by repository
 
@@ -630,17 +630,17 @@ with dependabot_tab:
 
     col1, col2, col3, col4 = st.columns(4)
 
-    col1.metric("Total Alerts", df_total_dependabot_alerts.iloc[0].sum(axis=0))
-    col2.metric("Oldest Alert", oldest_dependabot_alert)
-    col3.metric("Worst Severity", worst_severity_dependabot)
-    col4.metric("Number of Repositories", len(df_dependabot))
+    col1.metric("Total Alerts", df_total_dependabot_alerts.iloc[0].sum(axis=0), border=True)
+    col2.metric("Oldest Alert", oldest_dependabot_alert, border=True)
+    col3.metric("Worst Severity", worst_severity_dependabot, border=True)
+    col4.metric("Number of Repositories", len(df_dependabot), border=True)
 
     col1, col2, col3, col4 = st.columns(4)
 
-    col1.metric("Critical Alerts", df_total_dependabot_alerts["critical"].sum())
-    col2.metric("High Alerts", df_total_dependabot_alerts["high"].sum())
-    col3.metric("Medium Alerts", df_total_dependabot_alerts["medium"].sum())
-    col4.metric("Low Alerts", df_total_dependabot_alerts["low"].sum())
+    col1.metric("Critical Alerts", df_total_dependabot_alerts["critical"].sum(), border=True)
+    col2.metric("High Alerts", df_total_dependabot_alerts["high"].sum(), border=True)
+    col3.metric("Medium Alerts", df_total_dependabot_alerts["medium"].sum(), border=True)
+    col4.metric("Low Alerts", df_total_dependabot_alerts["low"].sum(), border=True)
 
     # Pie chart showing the number of alerts by severity
 
@@ -688,16 +688,16 @@ with dependabot_tab:
 
             col1, col2, col3 = st.columns(3)
 
-            col1.metric("Oldest Alert", selected_repo["Oldest Alert"])
-            col2.metric("Worst Severity", selected_repo["Worst Severity"])
-            col3.metric("Total Alerts", selected_repo["Total Alerts"])
+            col1.metric("Oldest Alert", selected_repo["Oldest Alert"], border=True)
+            col2.metric("Worst Severity", selected_repo["Worst Severity"], border=True)
+            col3.metric("Total Alerts", selected_repo["Total Alerts"], border=True)
 
             col1, col2, col3, col4 = st.columns(4)
 
-            col1.metric("Critical Alerts", selected_repo["Critical Alerts"])
-            col2.metric("High Alerts", selected_repo["High Alerts"])
-            col3.metric("Medium Alerts", selected_repo["Medium Alerts"])
-            col4.metric("Low Alerts", selected_repo["Low Alerts"])
+            col1.metric("Critical Alerts", selected_repo["Critical Alerts"], border=True)
+            col2.metric("High Alerts", selected_repo["High Alerts"], border=True)
+            col3.metric("Medium Alerts", selected_repo["Medium Alerts"], border=True)
+            col4.metric("Low Alerts", selected_repo["Low Alerts"], border=True)
 
             df_alerts_pie = df_dependabot.loc[df_dependabot["Name"] == selected_repo["Name"]].drop(columns=["Name", "Oldest Alert", "Worst Severity", "Link", "Total Alerts"])
 
