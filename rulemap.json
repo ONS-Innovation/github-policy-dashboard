@@ -60,6 +60,12 @@
         "is_policy_rule": true
     },
     {
+        "name": "push_protection_disabled",
+        "description": "The repository does not have push protection enabled.",
+        "is_security_rule": true,
+        "is_policy_rule": true
+    },
+    {
         "name": "dependabot_disabled",
         "description": "The repository does not have dependabot enabled.",
         "is_security_rule": true,

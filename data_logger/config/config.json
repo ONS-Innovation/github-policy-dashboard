@@ -1,0 +1,21 @@
+{
+    "features": {
+        "repository_collection": true,
+        "dependabot_collection": true,
+        "secret_scanning_collection": true,
+        "show_log_locally": true,
+        "write_to_s3": true
+    },
+    "settings": {
+        "thread_count": 20,
+        "dependabot_thresholds": {
+            "critical": 5,
+            "high": 15,
+            "medium": 60,
+            "low": 90
+        },
+        "secret_scanning_threshold": 5,
+        "inactivity_threshold": 1,
+        "signed_commit_number": 15
+    }
+}
