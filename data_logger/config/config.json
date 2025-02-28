@@ -4,7 +4,7 @@
         "dependabot_collection": true,
         "secret_scanning_collection": true,
         "show_log_locally": true,
-        "write_to_s3": false
+        "write_to_s3": true
     },
     "settings": {
         "thread_count": 20,
