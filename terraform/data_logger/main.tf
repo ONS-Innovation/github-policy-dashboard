@@ -36,6 +36,8 @@ resource "aws_lambda_function" "lambda_function" {
     security_group_ids  = [aws_security_group.lambda_sg.id] // Dedicated security group for Lambda function
   }
 
+  memory_size = var.lambda_memory
+
   role = aws_iam_role.lambda_function_role.arn
 
   environment {
