@@ -26,6 +26,38 @@ This repository makes use of a Makefile to execute common commands. To view all 
 make all
 ```
 
+## `config.json`
+
+The lambda function contains a configuration file ([`config.json`](./config/config.json)). This file is used to setup key values within the script.
+
+`config.json` is divided into 2 high level keys: features and settings.
+
+The features key is used to enable or disable specific features within the tool (for example if you didn't want to collect dependabot information).
+
+The settings key is used to store key values used to collect and process data. This includes values such as how many threads to collect data with and how many years a repository must go without updates before it is considered inactive.
+
+The table below describes each configuration parameter and its use.
+
+### Features
+
+| Parameter | Description | Default |
+| --------- | ----------- | ------- |
+| `repository_collection` | Whether to collect repository data or not. | true |
+| `dependabot_collection` | Whether to collect dependabot data or not. | true |
+| `secret_scanning_collection` | Whether to collection secret scanning data or not. | true |
+| `show_log_locally` | This is for development purposes. This controls whether the log is stored locally as `debug.log`. This allows developers to see logging outputs when running the tool locally | true |
+| `write_to_s3` | Whether the tool should write its outputs to S3 or store them locally. Local storage is useful when testing / developing the tool locally. Local outputs are kept within `./output/`. When deploying to AWS, this key should **always** be `true`. | true |
+
+### Settings
+
+| Parameter | Description | Default |
+| --------- | ----------- | ------- |
+| `thread_count` | The number of threads to collect and process data with. | 20 |
+| `dependabot_thresholds` | This contains information about how many days a dependabot alert for a given severity is open before being considered a policy breach. | critical (5), high (15), medium (60), low (90) |
+| `secret_scanning_threshold` | The number of days a secret scanning alert must be open for before being considered a policy breach. | 5 days |
+| `inactivity_threshold` | The number of years a project goes without updates before being considered inactive. | 1 year |
+| `signed_commit_number` | The number of repository commits to check within the signed commit check (for example, when set to 15, only the 15 most recent commits). | 15 |
+
 ## Development
 
 To work on this project, you need to:
@@ -217,7 +249,15 @@ All of the commands (steps 2-5) are available for your environment within the AW
     aws ecr get-login-password --region eu-west-2 | docker login --username AWS --password-stdin <aws_account_id>.dkr.ecr.eu-west-2.amazonaws.com
     ```
 
-3. Ensuring you're at the root of the repository, build a docker image of the project.
+3. Ensure `config.json` is set correctly.
+
+    When running the data logger within AWS, it is essential that `write_to_s3` is set to `true`.
+
+    If this is not set correctly, the lambda function will run *without* storing its output.
+
+    For more information, see [`config.json`](#configjson).
+
+4. Ensuring you're at the root of the repository, build a docker image of the project.
 
     ```bash
     docker build -t sdp-dev-policy-dashboard-lambda .
@@ -225,7 +265,7 @@ All of the commands (steps 2-5) are available for your environment within the AW
 
     **Please Note:** Change `sdp-dev-policy-dashboard-lambda` within the above command to `<env_name>-<lambda_name>`.
 
-4. Tag the docker image to push to AWS, using the correct versioning mentioned in [prerequisites](#deployment-prerequisites).
+5. Tag the docker image to push to AWS, using the correct versioning mentioned in [prerequisites](#deployment-prerequisites).
 
     ```bash
     docker tag sdp-dev-policy-dashboard-lambda:latest <aws_account_id>.dkr.ecr.eu-west-2.amazonaws.com/sdp-dev-policy-dashboard-lambda:<semantic_version>
@@ -233,7 +273,7 @@ All of the commands (steps 2-5) are available for your environment within the AW
 
     **Please Note:** Change `sdp-dev-policy-dashboard-lambda` within the above command to `<env_name>-<lambda_name>`.
 
-5. Push the image to ECR.
+6. Push the image to ECR.
 
     ```bash
     docker push <aws_account_id>.dkr.ecr.eu-west-2.amazonaws.com/sdp-dev-policy-dashboard-lambda:<semantic_version>
@@ -242,6 +282,22 @@ All of the commands (steps 2-5) are available for your environment within the AW
 Once pushed, you should be able to see your new image version within the ECR repository.
 
 ### Deploying the Lambda
+
+#### Configuration
+
+##### `lambda_memory`
+
+Within your `.tfvars` for the respective environment, you can define the amount of memory assigned to the lambda function. The amount of memory given to a lambda also affects how much CPU resource is assigned to it. For more information on this see:
+
+- [Configure Lambda function memory](https://docs.aws.amazon.com/lambda/latest/dg/configuration-memory.html)
+- [Lambda quotas](https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html)
+
+Within our environments, this value will need to vary.
+
+- For **sdp-dev**, `lambda_memory` should be set to 128. This is to reduce cost and, because of the decreased volume of information, reduces wasted resource.
+- For **sdp-prod**, `lambda_memory` should be set to 1024. This is because of the larger volume of data needing to be processed within the lambda's runtime (15 minutes).
+
+#### Instructions
 
 Once AWS ECR has the new container image, we need to update the Lambda's configuration to use it. To do this, use the repository's provided [Terraform](./terraform/).
 
@@ -260,6 +316,8 @@ Within the terraform directory, there is a [service](../terraform/data_logger/) 
     These files can be created based on [`example_tfvars.txt`](../terraform/data_logger/env/sandbox/example_tfvars.txt).
 
     **It is crucial that the completed `.tfvars` file does not get committed to GitHub.**
+
+    Ensure that you have read the [configuration guide](#configuration) **before** deployment.
 
 3. Initialise the terraform using the appropriate `.tfbackend` file for the environment (`env/dev/backend-dev.tfbackend` or `env/prod/backend-prod.tfbackend`).
 

@@ -71,6 +71,12 @@ variable "github_app_client_id" {
   type        = string
 }
 
+variable "lambda_memory" {
+  description = "AWS Lambda Memory Size"
+  type        = number
+  default     = 1024
+}
+
 variable "region" {
   description = "AWS region"
   type        = string
