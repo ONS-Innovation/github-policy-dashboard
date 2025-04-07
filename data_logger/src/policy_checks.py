@@ -66,7 +66,23 @@ def has_external_pr(prs: list, org_members: list) -> bool:
     """
 
     for pr in prs:
-        if pr["author"] not in org_members:
+        # Check if the PR has an author
+        # If not, the author of the PR is a deleted account
+        # and the PR is not considered external
+        # So we skip it
+        author = pr.get("author")
+        if not author:
+            continue
+
+        login = author.get("login")
+        if not login:
+            continue
+
+        # Dependabot PRs are not considered external
+        if login == "dependabot":
+            continue
+
+        if login not in org_members:
             return True
 
     return False
