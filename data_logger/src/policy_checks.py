@@ -66,7 +66,7 @@ def has_external_pr(prs: list, org_members: list) -> bool:
     """
 
     for pr in prs:
-        if pr["author"] not in org_members:
+        if pr["author"]["login"] not in org_members:
             return True
 
     return False
