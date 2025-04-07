@@ -79,7 +79,7 @@ def has_external_pr(prs: list, org_members: list) -> bool:
             continue
 
         # Dependabot PRs are not considered external
-        if login == "dependabot[bot]":
+        if login == "dependabot":
             continue
 
         if login not in org_members:
