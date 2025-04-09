@@ -42,6 +42,22 @@ def get_secret_manager_client() -> boto3.client:
     secret_manager = session.client("secretsmanager", secret_reigon)
     return secret_manager
 
+def get_last_modified() -> dict:
+
+    client = get_s3_client()
+
+    file_names = ["repositories.json", "secret_scanning.json", "dependabot.json"]
+    formatted_lm = {}
+
+    for x in file_names:
+        response = client.head_object(Bucket=bucket_name, Key=x)
+        last_modified = response["LastModified"]
+        file_key =x.split(".")[0]
+        formatted_lm[file_key]=last_modified.strftime('%Y-%m-%d %H:%M:%S')
+
+
+    return formatted_lm
+
 
 @st.cache_data
 def load_repositories(_s3, load_date: datetime.date) -> pd.DataFrame | str:
@@ -215,6 +231,7 @@ loading_date = loading_date.strftime("%Y-%m-%d %H:%M")
 loading_date = loading_date[:-1] + "0"
 
 s3 = get_s3_client()
+last_modified_values = get_last_modified()
 
 df_repositories = load_repositories(s3, loading_date)
 total_secret_alerts, oldest_secret_alert, df_secret_scanning = load_secret_scanning(s3, loading_date)
@@ -258,7 +275,15 @@ repository_tab, secret_tab, dependabot_tab = st.tabs(["Repository Analysis", "Se
 # Repository Analysis Section
 
 with repository_tab:
-    st.header(":blue-background[Repository Analysis]")
+    rep_last_modified = last_modified_values["repositories"]
+    colh, colt =st.columns([3,1])
+
+    with colh:
+        st.header(":blue-background[Repository Analysis]")
+    
+    with colt:
+        st.write(f"#### Last Updated: {rep_last_modified}")
+
 
     # Gets the rules from the repository DataFrame
     rules = df_repositories.columns.to_list()[4:]
@@ -546,7 +571,15 @@ with repository_tab:
 # Secret Scanning Analysis Section
 
 with secret_tab:
-    st.header(":blue-background[Secret Scanning Analysis]")
+    colh, colt =st.columns([3,1])
+    secrets_tab = last_modified_values["secret_scanning"]
+
+    with colh:
+         st.header(":blue-background[Secret Scanning Analysis]")
+    
+    with colt:
+        st.write(f"#### Last Updated: {secrets_tab}")
+
     st.write("Alerts open for more than 5 days.")
 
     col1, col2, col3, col4 = st.columns(4)
@@ -584,7 +617,15 @@ with secret_tab:
 # Dependabot Analysis Section
 
 with dependabot_tab:
-    st.header(":blue-background[Dependabot Analysis]")
+    colh, colt =st.columns([3,1])
+    dependabot = last_modified_values["dependabot"]
+    
+    with colh:
+        st.header(":blue-background[Dependabot Analysis]")
+
+    with colt:
+        st.write(f"#### Last Updated: {dependabot}")
+
     st.write("Alerts open for more than 5 days (Critical), 15 days (High), 60 days (Medium), 90 days (Low).")
 
     # Data filters
