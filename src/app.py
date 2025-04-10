@@ -49,7 +49,7 @@ def get_last_modified(client: boto3.client, file_names: list[str]) -> dict:
 
     Args:
         client (boto3.client): An initialized boto3 S3 client.
-        file_names: A list fo string values.
+        file_names: A list of string values.
 
     Returns:
         dict: A dictionary containing formatted datetime values of the last modification date for each file.
