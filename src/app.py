@@ -42,22 +42,36 @@ def get_secret_manager_client() -> boto3.client:
     secret_manager = session.client("secretsmanager", secret_reigon)
     return secret_manager
 
-def get_last_modified() -> dict:
+def get_last_modified(client: boto3.client, file_names: list[str]) -> dict:
+    """
+    This function retrieves and returns the `LastModified` value for the specified set of files
+    in a given S3 bucket.
 
-    client = get_s3_client()
+    Args:
+        client (boto3.client): An initialized boto3 S3 client.
+        file_names: A list fo string values.
 
-    file_names = ["repositories.json", "secret_scanning.json", "dependabot.json"]
-    formatted_lm = {}
+    Returns:
+        dict: A dictionary containing formatted datetime values of the last modification date for each file.
+              The keys are the base file names (without extension) and the values are the formatted datetime strings.
+    
+    Raises:
+        Exception: Propagates any exceptions not caught by the individual file processing.
+    """
 
-    for x in file_names:
-        response = client.head_object(Bucket=bucket_name, Key=x)
-        last_modified = response["LastModified"]
-        file_key =x.split(".")[0]
-        formatted_lm[file_key]=last_modified.strftime('%Y-%m-%d %H:%M:%S')
+    last_modified_timestamps = {}
 
+    for file in file_names:
+        try:
+            response = client.head_object(Bucket=bucket_name, Key=file)
+            last_modified = response["LastModified"]
+            file_key = file.split(".")[0]
+            last_modified_timestamps[file_key] = last_modified.strftime('%Y-%m-%d %H:%M:%S')
+        except Exception as e:
+            # Handle the error for a specific file here.
+            print(f"Error processing file {file}: {e}")
 
-    return formatted_lm
-
+    return last_modified_timestamps
 
 @st.cache_data
 def load_repositories(_s3, load_date: datetime.date) -> pd.DataFrame | str:
@@ -231,7 +245,9 @@ loading_date = loading_date.strftime("%Y-%m-%d %H:%M")
 loading_date = loading_date[:-1] + "0"
 
 s3 = get_s3_client()
-last_modified_values = get_last_modified()
+
+file_names = ["repositories.json", "secret_scanning.json", "dependabot.json"]
+last_modified_values = get_last_modified(s3, file_names)
 
 df_repositories = load_repositories(s3, loading_date)
 total_secret_alerts, oldest_secret_alert, df_secret_scanning = load_secret_scanning(s3, loading_date)
@@ -276,12 +292,12 @@ repository_tab, secret_tab, dependabot_tab = st.tabs(["Repository Analysis", "Se
 
 with repository_tab:
     rep_last_modified = last_modified_values["repositories"]
-    colh, colt =st.columns([3,1])
+    col1, col2 =st.columns([3,1])
 
-    with colh:
+    with col1:
         st.header(":blue-background[Repository Analysis]")
     
-    with colt:
+    with col2:
         st.write(f"#### Last Updated: {rep_last_modified}")
 
 
@@ -571,13 +587,13 @@ with repository_tab:
 # Secret Scanning Analysis Section
 
 with secret_tab:
-    colh, colt =st.columns([3,1])
+    col1, col2 =st.columns([3,1])
     secrets_tab = last_modified_values["secret_scanning"]
 
-    with colh:
+    with col1:
          st.header(":blue-background[Secret Scanning Analysis]")
     
-    with colt:
+    with col2:
         st.write(f"#### Last Updated: {secrets_tab}")
 
     st.write("Alerts open for more than 5 days.")
@@ -617,13 +633,13 @@ with secret_tab:
 # Dependabot Analysis Section
 
 with dependabot_tab:
-    colh, colt =st.columns([3,1])
+    col1, col2 =st.columns([3,1])
     dependabot = last_modified_values["dependabot"]
-    
-    with colh:
+
+    with col1:
         st.header(":blue-background[Dependabot Analysis]")
 
-    with colt:
+    with col2:
         st.write(f"#### Last Updated: {dependabot}")
 
     st.write("Alerts open for more than 5 days (Critical), 15 days (High), 60 days (Medium), 90 days (Low).")
