@@ -432,7 +432,7 @@ with repository_tab:
         with st.expander("See Rule Descriptions"):
             st.subheader("Rule Descriptions")
             for rule in rulemap:
-                st.write(f"- {rule['name'].replace('_', ' ').title()}: {rule['description']}")
+                st.write(f"- **{rule['name'].replace('_', ' ').title()}:** {rule['description']}")
 
             st.caption(
                 "**Note:** All rules are interpreted from ONS' [GitHub Usage Policy](https://officenationalstatistics.sharepoint.com/sites/ONS%5FDDaT%5FCommunities/Software%20Engineering%20Policies/Forms/AllItems.aspx?id=%2Fsites%2FONS%5FDDaT%5FCommunities%2FSoftware%20Engineering%20Policies%2FSoftware%20Engineering%20Policies%2FApproved%2FPDF%2FGitHub%20Usage%20Policy%2Epdf&parent=%2Fsites%2FONS%5FDDaT%5FCommunities%2FSoftware%20Engineering%20Policies%2FSoftware%20Engineering%20Policies%2FApproved%2FPDF)."
@@ -447,7 +447,7 @@ with repository_tab:
         for i in range(0, len(selected_rules)):
             if rulemap[i]["note"] != "":
                 notes_list.append(
-                    f"- {selected_rules[i].replace('_', ' ').title()}: {rulemap[i]['note']}"
+                    f"- **{selected_rules[i].replace('_', ' ').title()}:** {rulemap[i]['note']}"
                 )
 
         if len(notes_list) > 0:
