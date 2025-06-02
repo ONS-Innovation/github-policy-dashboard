@@ -362,6 +362,10 @@ with repository_tab:
     with col2:
         end_date = st.date_input("End Date", (datetime.now() + timedelta(days=1)).date(), key="end_date_repo")
 
+    st.caption(
+        "**Please Note:** The above date range is used to filter the creation date of repositories."
+    )
+
     if end_date < start_date:
         st.error("End date cannot be before start date.")
         st.stop()
@@ -433,6 +437,28 @@ with repository_tab:
             st.caption(
                 "**Note:** All rules are interpreted from ONS' [GitHub Usage Policy](https://officenationalstatistics.sharepoint.com/sites/ONS%5FDDaT%5FCommunities/Software%20Engineering%20Policies/Forms/AllItems.aspx?id=%2Fsites%2FONS%5FDDaT%5FCommunities%2FSoftware%20Engineering%20Policies%2FSoftware%20Engineering%20Policies%2FApproved%2FPDF%2FGitHub%20Usage%20Policy%2Epdf&parent=%2Fsites%2FONS%5FDDaT%5FCommunities%2FSoftware%20Engineering%20Policies%2FSoftware%20Engineering%20Policies%2FApproved%2FPDF)."
             )
+
+        st.divider()
+
+        st.subheader(":blue-background[Rule Notes]")
+
+        notes_list = []
+
+        for i in range(0, len(selected_rules)):
+            if rulemap[i]["note"] != "":
+                notes_list.append(
+                    f"- {selected_rules[i].replace('_', ' ').title()}: {rulemap[i]['note']}"
+                )
+
+        if len(notes_list) > 0:
+            col1a, col1b = st.columns(2)
+            
+            for i in range(0, len(notes_list)):
+                if i % 2 == 0:
+                    col1a.write(notes_list[i])
+                else:
+                    col1b.write(notes_list[i])
+                
 
         st.divider()
 
