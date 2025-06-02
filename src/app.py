@@ -66,7 +66,7 @@ def get_last_modified(client: boto3.client, file_names: list[str]) -> dict:
             response = client.head_object(Bucket=bucket_name, Key=file)
             last_modified = response["LastModified"]
             file_key = file.split(".")[0]
-            last_modified_timestamps[file_key] = last_modified.strftime('%Y-%m-%d %H:%M:%S')
+            last_modified_timestamps[file_key] = last_modified.strftime('%Y-%m-%d @ %H:%M')
         except Exception as e:
             # Handle the error for a specific file here.
             print(f"Error processing file {file}: {e}")
