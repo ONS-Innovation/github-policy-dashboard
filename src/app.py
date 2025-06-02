@@ -96,6 +96,9 @@ def load_repositories(_s3, load_date: datetime.date) -> pd.DataFrame | str:
 
     df_repositories = pd.json_normalize(json_data)
 
+    # Update repository_type to be title case
+    df_repositories["type"] = df_repositories["type"].str.title()
+
     return df_repositories
     
 
@@ -322,7 +325,7 @@ with repository_tab:
 
     repository_type = st.selectbox(
         "Repository Type",
-        ["all", "public", "private", "internal"],
+        ["All", "Public", "Private", "Internal"],
         key="repos_repo_type",
     )
 
@@ -353,8 +356,8 @@ with repository_tab:
         df_repositories = df_repositories.drop(columns=rules_to_exclude)
 
         # Filter the DataFrame by the selected repository type
-        if repository_type != "all":
-            df_repositories = df_repositories.loc[df_repositories["repository_type"] == repository_type.upper()]
+        if repository_type != "All":
+            df_repositories = df_repositories.loc[df_repositories["repository_type"] == repository_type]
 
         # Filter the DataFrame by the selected date range
         df_repositories["created_at"] = pd.to_datetime(df_repositories["created_at"], errors="coerce").dt.tz_localize(
@@ -620,10 +623,12 @@ with secret_tab:
         ]
 
         ## Repository Type Filter
-        type_list = ["All", "Public", "Private", "Internal", "Archived"]
+        type_list = ["All", "All (Except Archived)", "Public", "Private", "Internal", "Archived"]
         selected_type = col3.selectbox("Select Repository Type", type_list)
 
-        if selected_type != "All":
+        if selected_type == "All (Except Archived)":
+            df_secret_scanning = df_secret_scanning.loc[df_secret_scanning["Type"] != "Archived"]
+        elif selected_type != "All":
             df_secret_scanning = df_secret_scanning.loc[df_secret_scanning["Type"] == selected_type]
 
         if len(df_secret_scanning) == 0:
