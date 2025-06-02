@@ -853,113 +853,6 @@ def get_dependabot_data(logger: wrapped_logging, rest: github_api_toolkit.github
 
     return dependabot_data
 
-
-def group_dependabot_data(dependabot_data: list[dict], repositories: list[dict], severity_map: dict) -> dict:
-    """Groups the Dependabot data by repository and calculates the total alerts, oldest alert and worst severity.
-
-    Args:
-        dependabot_data (list[dict]): The Dependabot data for all the repositories in the organization.
-        repositories (list[dict]): The list of repositories in the organization.
-        severity_map (dict): The severity map for the Dependabot alerts.
-
-    Returns:
-        dict: The grouped Dependabot data.
-    """
-
-    grouped_data = {
-        "repositories": {},
-        "total_alerts": {
-            "critical": 0,
-            "high": 0,
-            "medium": 0,
-            "low": 0
-        },
-        "oldest_alert": "3000-01-01T00:00:00Z",
-        "worst_severity": "none"
-    }
-
-    for alert in dependabot_data:
-        
-        repository = alert["repository"]
-
-        # Skip the alert if the repository is not in the list of repositories
-        # This means the alert is for an archived repository
-        if not any(repo["name"] == repository for repo in repositories):
-            continue
-
-        if repository not in grouped_data["repositories"]:
-            grouped_data["repositories"][repository] = {
-                "url": alert["repository_url"],
-                "oldest_alert": "3000-01-01T00:00:00Z",
-                "worst_severity": "none",
-                "alerts": {
-                    "critical": 0,
-                    "high": 0,
-                    "medium": 0,
-                    "low": 0
-                }
-            }
-
-        grouped_repository = grouped_data["repositories"][repository]
-
-        # Increment the severity count for the repository
-        match alert["severity"]:
-            case "critical":
-                grouped_repository["alerts"]["critical"] += 1
-                grouped_data["total_alerts"]["critical"] += 1
-            case "high":
-                grouped_repository["alerts"]["high"] += 1
-                grouped_data["total_alerts"]["high"] += 1
-            case "medium":
-                grouped_repository["alerts"]["medium"] += 1
-                grouped_data["total_alerts"]["medium"] += 1
-            case "low":
-                grouped_repository["alerts"]["low"] += 1
-                grouped_data["total_alerts"]["low"] += 1
-
-        # Update the oldest alert (days)
-        days_open = datetime.datetime.now() - datetime.datetime.strptime(alert["created_at"], "%Y-%m-%dT%H:%M:%SZ")
-        days_open = days_open.days
-
-        repository_oldest_alert = (datetime.datetime.now() - datetime.datetime.strptime(grouped_repository["oldest_alert"], "%Y-%m-%dT%H:%M:%SZ")).days
-        dataset_oldest_alert = (datetime.datetime.now() - datetime.datetime.strptime(grouped_data["oldest_alert"], "%Y-%m-%dT%H:%M:%SZ")).days
-
-        if days_open > repository_oldest_alert:
-            grouped_repository["oldest_alert"] = alert["created_at"]
-
-        # Update the worst severity
-        # This can be skipped if the severity is already critical (highest severity)
-        if grouped_repository["worst_severity"] != "critical":
-
-            # If the worst severity is none, set it to the current alert severity (as none is the default value)
-            if grouped_repository["worst_severity"] == "none":
-                grouped_repository["worst_severity"] = alert["severity"]
-
-            # If the current alert severity is higher than the worst severity, update the worst severity
-            elif severity_map[alert["severity"]] > severity_map[grouped_repository["worst_severity"]]:
-                grouped_repository["worst_severity"] = alert["severity"]
-
-
-        # Update the oldest alert for whole dataset (days)
-        if days_open > dataset_oldest_alert:
-            grouped_data["oldest_alert"] = alert["created_at"]
-
-        # Update the worst severity for whole dataset
-        # This can be skipped if the severity is already critical (highest severity)
-        if grouped_data["worst_severity"] != "critical":
-
-            # If the worst severity is none, set it to the current alert severity (as none is the default value)
-            if grouped_data["worst_severity"] == "none":
-                grouped_data["worst_severity"] = alert["severity"]
-
-            # If the current alert severity is higher than the worst severity, update the worst severity
-            elif severity_map[alert["severity"]] > severity_map[grouped_data[repository]["worst_severity"]]:
-                grouped_data["worst_severity"] = alert["severity"]
-
-
-    return grouped_data
-
-
 def get_secret_scanning_data(logger: wrapped_logging, rest: github_api_toolkit.github_interface, org: str, threshold: int) -> dict:
     """Gets the Secret Scanning alerts for an organization.
 
@@ -973,11 +866,7 @@ def get_secret_scanning_data(logger: wrapped_logging, rest: github_api_toolkit.g
         dict: The Secret Scanning data the organization.
     """
 
-    secret_scanning_data = {
-        "repositories": {},
-        "total_alerts": 0,
-        "oldest_alert": "3000-01-01T00:00:00Z"
-    }
+    secret_scanning_data = []
 
     response = rest.get(f"/orgs/{org}/secret-scanning/alerts", {"state": "open","per_page": 100})
 
@@ -1008,33 +897,13 @@ def get_secret_scanning_data(logger: wrapped_logging, rest: github_api_toolkit.g
             if days_open <= threshold:
                 continue
 
-            repository = alert["repository"]["name"]
+            formatted_alert = {
+                "repository": alert["repository"]["name"],
+                "creation_date": alert["created_at"],
+                "url": alert["html_url"]
+            }
 
-            if repository not in secret_scanning_data["repositories"]:
-                secret_scanning_data["repositories"][repository] = {
-                    "url": alert["repository"]["html_url"],
-                    "oldest_alert": "3000-01-01T00:00:00Z",
-                    "alert_count": 0
-                }
-
-            data_repository = secret_scanning_data["repositories"][repository]
-
-            repository_oldest_alert = (datetime.datetime.now() - datetime.datetime.strptime(data_repository["oldest_alert"], "%Y-%m-%dT%H:%M:%SZ")).days
-            dataset_oldest_alert = (datetime.datetime.now() - datetime.datetime.strptime(secret_scanning_data["oldest_alert"], "%Y-%m-%dT%H:%M:%SZ")).days
-
-            # Increment the alert count for the repository
-            data_repository["alert_count"] += 1
-
-            # Update the oldest alert (days)
-            if days_open > repository_oldest_alert:
-                data_repository["oldest_alert"] = alert["created_at"]
-
-            # Update the total alert count for the whole dataset
-            secret_scanning_data["total_alerts"] += 1
-
-            # Update the oldest alert for the whole dataset (days)
-            if days_open > dataset_oldest_alert:
-                secret_scanning_data["oldest_alert"] = alert["created_at"]
+            secret_scanning_data.append(formatted_alert)
 
     return secret_scanning_data
 
@@ -1162,18 +1031,6 @@ def handler(event, context) -> str: # type: ignore[no-untyped-def]
         dependabot_data = get_dependabot_data(logger, rest, org, dependabot_thresholds)
 
         logger.log_info(f"Taken {time.time() - dependabot_start_time} seconds to collect Dependabot data.")
-
-        # Group the data by repository and remove archived repositories
-
-        # Maps the severity to a number for comparison
-        severity_map = {
-            "critical": 4,
-            "high": 3,
-            "medium": 2,
-            "low": 1
-        }
-
-        dependabot_data = group_dependabot_data(dependabot_data, repositories, severity_map)
 
         # Upload Dependabot Data to S3
 
