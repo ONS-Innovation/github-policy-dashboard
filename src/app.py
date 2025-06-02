@@ -624,37 +624,41 @@ with secret_tab:
 
     st.write("Alerts open for more than 5 days.")
 
-    col1, col2, col3, col4 = st.columns(4)
+    if len(df_secret_scanning) == 0:
+        st.write("No secret scanning alerts breaking the policy.")
+    else:
 
-    col1.metric("Total Alerts", total_secret_alerts, border=True)
-    col2.metric("Oldest Alert", oldest_secret_alert, border=True)
-    col3.metric("Number of Repositories", len(df_secret_scanning), border=True)
-    col4.metric("Average Alerts per Repository", round(total_secret_alerts / len(df_secret_scanning)), border=True)
+        col1, col2, col3, col4 = st.columns(4)
 
-    col1, col2 = st.columns([0.7, 0.3])
+        col1.metric("Total Alerts", total_secret_alerts, border=True)
+        col2.metric("Oldest Alert", oldest_secret_alert, border=True)
+        col3.metric("Number of Repositories", len(df_secret_scanning), border=True)
+        col4.metric("Average Alerts per Repository", round(total_secret_alerts / len(df_secret_scanning)), border=True)
 
-    col1.metric("Repository with Most Alerts", df_secret_scanning["Name"].iloc[df_secret_scanning["Total Alerts"].idxmax()], border=True)
-    col2.metric("Number of Repository Alerts", df_secret_scanning["Total Alerts"].max(), border=True)
+        col1, col2 = st.columns([0.7, 0.3])
 
-    # Pie chart showing the number of alerts by repository
+        col1.metric("Repository with Most Alerts", df_secret_scanning["Name"].iloc[df_secret_scanning["Total Alerts"].idxmax()], border=True)
+        col2.metric("Number of Repository Alerts", df_secret_scanning["Total Alerts"].max(), border=True)
 
-    fig = px.pie(
-        df_secret_scanning,
-        values="Total Alerts",
-        names="Name",
-        title="Total Alerts by Repository",
-    )
+        # Pie chart showing the number of alerts by repository
 
-    st.plotly_chart(fig)
+        fig = px.pie(
+            df_secret_scanning,
+            values="Total Alerts",
+            names="Name",
+            title="Total Alerts by Repository",
+        )
 
-    st.dataframe(
-        df_secret_scanning, 
-        use_container_width=True, 
-        hide_index=True,
-        column_config={
-            "Link": st.column_config.LinkColumn()
-        }
-    )
+        st.plotly_chart(fig)
+
+        st.dataframe(
+            df_secret_scanning, 
+            use_container_width=True, 
+            hide_index=True,
+            column_config={
+                "Link": st.column_config.LinkColumn()
+            }
+        )
 
 # Dependabot Analysis Section
 
@@ -670,128 +674,132 @@ with dependabot_tab:
 
     st.write("Alerts open for more than 5 days (Critical), 15 days (High), 60 days (Medium), 90 days (Low).")
 
-    # Data filters
-
-    col1, col2 = st.columns([0.7, 0.3])
-
-    ## Severity Filter
-
-    severity_list = ["Critical", "High", "Medium", "Low"]
-
-    selected_severities = col1.multiselect("Select Severities", severity_list, severity_list)
-
-    if len(selected_severities) == 0:
-        st.info("Please select at least one severity to see metrics.")
-        st.stop()
-
-    severities_to_exclude = []
-
-    for severity in severity_list:
-        if severity not in selected_severities:
-            severities_to_exclude.append(severity)
-
-    for severity in severities_to_exclude:
-        df_dependabot[severity + " Alerts"] = 0
-
-        severity = severity.lower()
-
-        df_total_dependabot_alerts[severity] = 0
-
-    df_dependabot["Total Alerts"] = df_dependabot["Critical Alerts"] + df_dependabot["High Alerts"] + df_dependabot["Medium Alerts"] + df_dependabot["Low Alerts"]
-
-    # Remove repositories with no alerts
-    df_dependabot = df_dependabot.loc[df_dependabot["Total Alerts"] > 0]
-
-    ## Repository Type Filter
-
-    type_list = ["all", "public", "private", "internal"]
-
-    selected_type = col2.selectbox("Select Repository Type", type_list)
-
-    if selected_type != "all":
-        df_dependabot = df_dependabot.loc[df_dependabot["Type"] == selected_type.upper()]
-
-    col1, col2, col3, col4 = st.columns(4)
-
-    col1.metric("Total Alerts", df_total_dependabot_alerts.iloc[0].sum(axis=0), border=True)
-    col2.metric("Oldest Alert", oldest_dependabot_alert, border=True)
-    col3.metric("Worst Severity", worst_severity_dependabot, border=True)
-    col4.metric("Number of Repositories", len(df_dependabot), border=True)
-
-    col1, col2, col3, col4 = st.columns(4)
-
-    col1.metric("Critical Alerts", df_total_dependabot_alerts["critical"].sum(), border=True)
-    col2.metric("High Alerts", df_total_dependabot_alerts["high"].sum(), border=True)
-    col3.metric("Medium Alerts", df_total_dependabot_alerts["medium"].sum(), border=True)
-    col4.metric("Low Alerts", df_total_dependabot_alerts["low"].sum(), border=True)
-
-    # Pie chart showing the number of alerts by severity
-
-    # Pivot data to become severity | count
-    df_dependabot_alerts_pivot = df_total_dependabot_alerts.melt(var_name="Severity", value_name="Count")
-
-    fig = px.pie(
-        df_dependabot_alerts_pivot,
-        values="Count",
-        names="Severity",
-        title="Total Alerts by Severity",
-    )
-
-    st.plotly_chart(fig)
-
-    # Hide the columns that are not needed
-    df_dependabot_filtered = df_dependabot.drop(columns=["Critical Alerts", "High Alerts", "Medium Alerts", "Low Alerts"])
-
-    selected_repo = st.dataframe(
-        df_dependabot_filtered,
-        column_order=["Name", "Type", "Oldest Alert", "Worst Severity", "Total Alerts", "Link"],
-        use_container_width=True, 
-        hide_index=True,
-        column_config={
-            "Link": st.column_config.LinkColumn()
-        },
-        selection_mode="single-row",
-        on_select="rerun"
-    )
-
-    if len(selected_repo["selection"]["rows"]) > 0:
-
-        with st.spinner("Loading Repository Information..."):
-
-            selected_repo = selected_repo["selection"]["rows"][0]
-
-            selected_repo = df_dependabot.iloc[selected_repo]
-
-            col1, col2 = st.columns([0.8, 0.2])
-
-            col1.subheader(
-                f":blue-background[{selected_repo['Name']}]"
-            )
-            col2.write(f"[Go to Repository]({selected_repo['Link']})")
-
-            col1, col2, col3 = st.columns(3)
-
-            col1.metric("Oldest Alert", selected_repo["Oldest Alert"], border=True)
-            col2.metric("Worst Severity", selected_repo["Worst Severity"], border=True)
-            col3.metric("Total Alerts", selected_repo["Total Alerts"], border=True)
-
-            col1, col2, col3, col4 = st.columns(4)
-
-            col1.metric("Critical Alerts", selected_repo["Critical Alerts"], border=True)
-            col2.metric("High Alerts", selected_repo["High Alerts"], border=True)
-            col3.metric("Medium Alerts", selected_repo["Medium Alerts"], border=True)
-            col4.metric("Low Alerts", selected_repo["Low Alerts"], border=True)
-
-            df_alerts_pie = df_dependabot.loc[df_dependabot["Name"] == selected_repo["Name"]].drop(columns=["Name", "Oldest Alert", "Worst Severity", "Link", "Total Alerts"])
-
-            fig = px.pie(
-                df_alerts_pie,
-                values=df_alerts_pie.values[0],
-                names=df_alerts_pie.columns,
-                title=f"Total Alerts by Severity for {selected_repo['Name']}",
-            )
-
-            st.plotly_chart(fig)
-            
+    if len(df_dependabot) == 0:
+        st.write("No dependabot alerts breaking the policy.")
     else:
-        st.caption("Select a repository for more information.")
+
+        # Data filters
+
+        col1, col2 = st.columns([0.7, 0.3])
+
+        ## Severity Filter
+
+        severity_list = ["Critical", "High", "Medium", "Low"]
+
+        selected_severities = col1.multiselect("Select Severities", severity_list, severity_list)
+
+        if len(selected_severities) == 0:
+            st.info("Please select at least one severity to see metrics.")
+            st.stop()
+
+        severities_to_exclude = []
+
+        for severity in severity_list:
+            if severity not in selected_severities:
+                severities_to_exclude.append(severity)
+
+        for severity in severities_to_exclude:
+            df_dependabot[severity + " Alerts"] = 0
+
+            severity = severity.lower()
+
+            df_total_dependabot_alerts[severity] = 0
+
+        df_dependabot["Total Alerts"] = df_dependabot["Critical Alerts"] + df_dependabot["High Alerts"] + df_dependabot["Medium Alerts"] + df_dependabot["Low Alerts"]
+
+        # Remove repositories with no alerts
+        df_dependabot = df_dependabot.loc[df_dependabot["Total Alerts"] > 0]
+
+        ## Repository Type Filter
+
+        type_list = ["all", "public", "private", "internal"]
+
+        selected_type = col2.selectbox("Select Repository Type", type_list)
+
+        if selected_type != "all":
+            df_dependabot = df_dependabot.loc[df_dependabot["Type"] == selected_type.upper()]
+
+        col1, col2, col3, col4 = st.columns(4)
+
+        col1.metric("Total Alerts", df_total_dependabot_alerts.iloc[0].sum(axis=0), border=True)
+        col2.metric("Oldest Alert", oldest_dependabot_alert, border=True)
+        col3.metric("Worst Severity", worst_severity_dependabot, border=True)
+        col4.metric("Number of Repositories", len(df_dependabot), border=True)
+
+        col1, col2, col3, col4 = st.columns(4)
+
+        col1.metric("Critical Alerts", df_total_dependabot_alerts["critical"].sum(), border=True)
+        col2.metric("High Alerts", df_total_dependabot_alerts["high"].sum(), border=True)
+        col3.metric("Medium Alerts", df_total_dependabot_alerts["medium"].sum(), border=True)
+        col4.metric("Low Alerts", df_total_dependabot_alerts["low"].sum(), border=True)
+
+        # Pie chart showing the number of alerts by severity
+
+        # Pivot data to become severity | count
+        df_dependabot_alerts_pivot = df_total_dependabot_alerts.melt(var_name="Severity", value_name="Count")
+
+        fig = px.pie(
+            df_dependabot_alerts_pivot,
+            values="Count",
+            names="Severity",
+            title="Total Alerts by Severity",
+        )
+
+        st.plotly_chart(fig)
+
+        # Hide the columns that are not needed
+        df_dependabot_filtered = df_dependabot.drop(columns=["Critical Alerts", "High Alerts", "Medium Alerts", "Low Alerts"])
+
+        selected_repo = st.dataframe(
+            df_dependabot_filtered,
+            column_order=["Name", "Type", "Oldest Alert", "Worst Severity", "Total Alerts", "Link"],
+            use_container_width=True, 
+            hide_index=True,
+            column_config={
+                "Link": st.column_config.LinkColumn()
+            },
+            selection_mode="single-row",
+            on_select="rerun"
+        )
+
+        if len(selected_repo["selection"]["rows"]) > 0:
+
+            with st.spinner("Loading Repository Information..."):
+
+                selected_repo = selected_repo["selection"]["rows"][0]
+
+                selected_repo = df_dependabot.iloc[selected_repo]
+
+                col1, col2 = st.columns([0.8, 0.2])
+
+                col1.subheader(
+                    f":blue-background[{selected_repo['Name']}]"
+                )
+                col2.write(f"[Go to Repository]({selected_repo['Link']})")
+
+                col1, col2, col3 = st.columns(3)
+
+                col1.metric("Oldest Alert", selected_repo["Oldest Alert"], border=True)
+                col2.metric("Worst Severity", selected_repo["Worst Severity"], border=True)
+                col3.metric("Total Alerts", selected_repo["Total Alerts"], border=True)
+
+                col1, col2, col3, col4 = st.columns(4)
+
+                col1.metric("Critical Alerts", selected_repo["Critical Alerts"], border=True)
+                col2.metric("High Alerts", selected_repo["High Alerts"], border=True)
+                col3.metric("Medium Alerts", selected_repo["Medium Alerts"], border=True)
+                col4.metric("Low Alerts", selected_repo["Low Alerts"], border=True)
+
+                df_alerts_pie = df_dependabot.loc[df_dependabot["Name"] == selected_repo["Name"]].drop(columns=["Name", "Oldest Alert", "Worst Severity", "Link", "Total Alerts"])
+
+                fig = px.pie(
+                    df_alerts_pie,
+                    values=df_alerts_pie.values[0],
+                    names=df_alerts_pie.columns,
+                    title=f"Total Alerts by Severity for {selected_repo['Name']}",
+                )
+
+                st.plotly_chart(fig)
+                
+        else:
+            st.caption("Select a repository for more information.")
