@@ -601,6 +601,11 @@ def get_repository_batch(logger: wrapped_logging, rest: github_api_toolkit.githu
             if emails:
                 point_of_contact_missing = False
 
+        else:
+            # If a codeowners file is not found, the check should pass as this check won't apply.
+            # A CODEOWNERS file would be required and the codeowners check would fail instead.
+            point_of_contact_missing = False
+
 
         repository_data = {
             "name": repository["name"],
