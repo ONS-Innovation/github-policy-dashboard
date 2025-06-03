@@ -419,9 +419,14 @@ with repository_tab:
         notes_list = []
 
         for i in range(0, len(selected_rules)):
-            if rulemap[i]["note"] != "":
+            # Get the rule from the rulemap
+            rule = next((
+                item for item in rulemap if item["name"] == selected_rules[i]
+            ), None)
+
+            if rule["note"] != "":
                 notes_list.append(
-                    f"- **{selected_rules[i].replace('_', ' ').title()}:** {rulemap[i]['note']}"
+                    f"- **{rule["name"].replace('_', ' ').title()}:** {rule["note"]}"
                 )
 
         if len(notes_list) > 0:
