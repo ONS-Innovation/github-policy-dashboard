@@ -398,15 +398,19 @@ with repository_tab:
 
             col1a, col1b = st.columns(2)
             for i in range(0, len(selected_rules)):
+                rule_name = selected_rules[i].replace("_", " ").title()
+
                 if i % 2 == 0:
-                    col1a.write(f"- {selected_rules[i].replace('_', ' ').title()}")
+                    col1a.write(f"- {rule_name}")
                 else:
-                    col1b.write(f"- {selected_rules[i].replace('_', ' ').title()}")
+                    col1b.write(f"- {rule_name}")
 
         with st.expander("See Rule Descriptions"):
             st.subheader("Rule Descriptions")
             for rule in rulemap:
-                st.write(f"- **{rule['name'].replace('_', ' ').title()}:** {rule['description']}")
+                rule_name = rule['name'].replace('_', ' ').title()
+
+                st.write(f"- **{rule_name}:** {rule['description']}")
 
             st.caption(
                 "**Note:** All rules are interpreted from ONS' [GitHub Usage Policy](https://officenationalstatistics.sharepoint.com/sites/ONS%5FDDaT%5FCommunities/Software%20Engineering%20Policies/Forms/AllItems.aspx?id=%2Fsites%2FONS%5FDDaT%5FCommunities%2FSoftware%20Engineering%20Policies%2FSoftware%20Engineering%20Policies%2FApproved%2FPDF%2FGitHub%20Usage%20Policy%2Epdf&parent=%2Fsites%2FONS%5FDDaT%5FCommunities%2FSoftware%20Engineering%20Policies%2FSoftware%20Engineering%20Policies%2FApproved%2FPDF)."
@@ -424,9 +428,11 @@ with repository_tab:
                 item for item in rulemap if item["name"] == selected_rules[i]
             ), None)
 
-            if rule["note"] != "":
+            if rule["note"]:
+                rule_name = rule["name"].replace('_', ' ').title()
+
                 notes_list.append(
-                    f"- **{rule["name"].replace('_', ' ').title()}:** {rule["note"]}"
+                    f"- **{rule_name}:** {rule["note"]}"
                 )
 
         if len(notes_list) > 0:
