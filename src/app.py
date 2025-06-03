@@ -66,7 +66,7 @@ def get_last_modified(client: boto3.client, file_names: list[str]) -> dict:
             response = client.head_object(Bucket=bucket_name, Key=file)
             last_modified = response["LastModified"]
             file_key = file.split(".")[0]
-            last_modified_timestamps[file_key] = last_modified.strftime('%Y-%m-%d %H:%M:%S')
+            last_modified_timestamps[file_key] = last_modified.strftime('%Y-%m-%d @ %H:%M')
         except Exception as e:
             # Handle the error for a specific file here.
             print(f"Error processing file {file}: {e}")
@@ -96,6 +96,9 @@ def load_repositories(_s3, load_date: datetime.date) -> pd.DataFrame | str:
 
     df_repositories = pd.json_normalize(json_data)
 
+    # Update repository_type to be title case
+    df_repositories["type"] = df_repositories["type"].str.title()
+
     return df_repositories
     
 
@@ -120,38 +123,21 @@ def load_secret_scanning(_s3, load_date: datetime.date) -> pd.DataFrame | str:
     # Convert the response to a JSON object
     json_data = json.loads(response["Body"].read().decode("utf-8"))
 
-    # Extract key information from the JSON object (total alerts, oldest alert, and alerts for each repository)
-    total_alerts = json_data.get("total_alerts", 0)
-    oldest_alert = json_data.get("oldest_alert", 0)
+    df_secret_scanning = pd.json_normalize(json_data)
 
-    if oldest_alert != 0:
-        oldest_alert = (datetime.now() - datetime.strptime(oldest_alert, "%Y-%m-%dT%H:%M:%SZ")).days
+    # Rename the columns to be more readable
+    df_secret_scanning.columns = [
+        "Repository",
+        "Creation Date",
+        "URL",
+    ]
 
-    repositories_list = json_data.get("repositories", [])
+    # Add Alert Age (Days) to the DataFrame
+    df_secret_scanning["Alert Age (Days)"] = datetime.now() - pd.to_datetime(df_secret_scanning["Creation Date"]).dt.tz_localize(None)
+    df_secret_scanning["Alert Age (Days)"] = df_secret_scanning["Alert Age (Days)"].dt.days
+    df_secret_scanning["Alert Age (Days)"] = df_secret_scanning["Alert Age (Days)"].astype(int)
 
-    rows = []
-
-    for repository in repositories_list:
-        repository_name = repository
-        repository_oldest_alert = repositories_list[repository].get("oldest_alert", 0)
-        repository_total_alerts = repositories_list[repository].get("alert_count", 0)
-        repository_link = repositories_list[repository].get("url", "N/A")
-
-        if repository_oldest_alert != 0:
-            repository_oldest_alert = (datetime.now() - datetime.strptime(repository_oldest_alert, "%Y-%m-%dT%H:%M:%SZ")).days
-
-        rows.append(
-            {
-                "Name": repository_name,
-                "Oldest Alert": repository_oldest_alert,
-                "Total Alerts": repository_total_alerts,
-                "Link": repository_link
-            }
-        )
-
-    df_secret_scanning = pd.DataFrame(rows)
-
-    return total_alerts, oldest_alert, df_secret_scanning
+    return df_secret_scanning
 
 
 @st.cache_data
@@ -175,48 +161,25 @@ def load_dependabot(_s3, load_date: datetime.date) -> pd.DataFrame | str:
     # Convert the response to a JSON object
     json_data = json.loads(response["Body"].read().decode("utf-8"))
 
-    # Extract key information from the JSON object (total alerts, oldest alert, worst_severity, and alerts for each repository)
+    df_dependabot = pd.json_normalize(json_data)
 
-    oldest_alert = json_data.get("oldest_alert", 0)
-    worst_severity = json_data.get("worst_severity", "N/A")
+    # Rename the columns to be more readable
+    df_dependabot.columns = [
+        "Repository",
+        "URL",
+        "Creation Date",
+        "Severity",
+    ]
 
-    if oldest_alert != 0:
-        oldest_alert = (datetime.now() - datetime.strptime(oldest_alert, "%Y-%m-%dT%H:%M:%SZ")).days
+    # Add Alert Age (Days) to the DataFrame
+    df_dependabot["Alert Age (Days)"] = datetime.now() - pd.to_datetime(df_dependabot["Creation Date"]).dt.tz_localize(None)
+    df_dependabot["Alert Age (Days)"] = df_dependabot["Alert Age (Days)"].dt.days
+    df_dependabot["Alert Age (Days)"] = df_dependabot["Alert Age (Days)"].astype(int)
 
-    df_total_alerts = pd.json_normalize(json_data.get("total_alerts", []))
+    # Title Case the Severity column
+    df_dependabot["Severity"] = df_dependabot["Severity"].str.title()
 
-    rows = []
-
-    for repository in json_data.get("repositories", []):
-        repository_name = repository
-        repository_oldest_alert = json_data["repositories"][repository].get("oldest_alert", 0)
-        repository_worst_severity = json_data["repositories"][repository].get("worst_severity", "N/A")
-        repository_critical_alerts = json_data["repositories"][repository]["alerts"].get("critical", 0)
-        repository_high_alerts = json_data["repositories"][repository]["alerts"].get("high", 0)
-        repository_medium_alerts = json_data["repositories"][repository]["alerts"].get("medium", 0)
-        repository_low_alerts = json_data["repositories"][repository]["alerts"].get("low", 0)
-        repository_link = json_data["repositories"][repository].get("url", "N/A")
-
-        if repository_oldest_alert != 0:
-            repository_oldest_alert = (datetime.now() - datetime.strptime(repository_oldest_alert, "%Y-%m-%dT%H:%M:%SZ")).days
-
-        rows.append(
-            {
-                "Name": repository_name,
-                "Oldest Alert": repository_oldest_alert,
-                "Worst Severity": repository_worst_severity,
-                "Critical Alerts": repository_critical_alerts,
-                "High Alerts": repository_high_alerts,
-                "Medium Alerts": repository_medium_alerts,
-                "Low Alerts": repository_low_alerts,
-                "Link": repository_link
-            }
-        )
-
-    df_dependabot = pd.DataFrame(rows)
-
-    return df_total_alerts, oldest_alert, worst_severity, df_dependabot
-
+    return df_dependabot
 
 @st.cache_data
 def load_file(filename: str) -> dict:
@@ -250,8 +213,29 @@ file_names = ["repositories.json", "secret_scanning.json", "dependabot.json"]
 last_modified_values = get_last_modified(s3, file_names)
 
 df_repositories = load_repositories(s3, loading_date)
-total_secret_alerts, oldest_secret_alert, df_secret_scanning = load_secret_scanning(s3, loading_date)
-df_total_dependabot_alerts, oldest_dependabot_alert, worst_severity_dependabot, df_dependabot = load_dependabot(s3, loading_date)
+df_secret_scanning = load_secret_scanning(s3, loading_date)
+df_dependabot = load_dependabot(s3, loading_date)
+
+# Add Repository Type to dependabot data using the repository data
+for repository in df_dependabot["Repository"]:
+    repository_type = df_repositories.loc[df_repositories["name"] == repository, "type"].values
+
+    if len(repository_type) > 0:
+        df_dependabot.loc[df_dependabot["Repository"] == repository, "Type"] = repository_type[0].title()
+    else:
+        # If the repository is not found in the repositories data, the alert is for an archived repository
+        df_dependabot.loc[df_dependabot["Repository"] == repository, "Type"] = "Archived"
+
+# Add Repository Type to secret scanning data using the repository data
+for repository in df_secret_scanning["Repository"]:
+    repository_type = df_repositories.loc[df_repositories["name"] == repository, "type"].values
+
+    if len(repository_type) > 0:
+        df_secret_scanning.loc[df_secret_scanning["Repository"] == repository, "Type"] = repository_type[0].title()
+    else:
+        # If the repository is not found in the repositories data, the alert is for an archived repository
+        df_secret_scanning.loc[df_secret_scanning["Repository"] == repository, "Type"] = "Archived"
+
 
 rulemap = load_file("rulemap.json")
 
@@ -266,16 +250,6 @@ if type(df_secret_scanning) == str:
 if type(df_dependabot) == str:
     st.error(df_dependabot)
     st.stop()
-
-
-# Add Repository Type to dependabot data using the repository data
-for repository in df_dependabot["Name"]:
-    repository_type = df_repositories.loc[df_repositories["name"] == repository, "type"].values
-
-    if len(repository_type) > 0:
-        df_dependabot.loc[df_dependabot["Name"] == repository, "Type"] = repository_type[0]
-    else:
-        df_dependabot.loc[df_dependabot["Name"] == repository, "Type"] = "N/A"
 
 
 col1, col2 = st.columns([0.8, 0.2])
@@ -351,7 +325,7 @@ with repository_tab:
 
     repository_type = st.selectbox(
         "Repository Type",
-        ["all", "public", "private", "internal"],
+        ["All", "Public", "Private", "Internal"],
         key="repos_repo_type",
     )
 
@@ -361,6 +335,10 @@ with repository_tab:
         start_date = st.date_input("Start Date", pd.to_datetime(df_repositories["created_at"].min()), key="start_date_repo")
     with col2:
         end_date = st.date_input("End Date", (datetime.now() + timedelta(days=1)).date(), key="end_date_repo")
+
+    st.caption(
+        "**Please Note:** The above date range is used to filter the creation date of repositories."
+    )
 
     if end_date < start_date:
         st.error("End date cannot be before start date.")
@@ -378,8 +356,8 @@ with repository_tab:
         df_repositories = df_repositories.drop(columns=rules_to_exclude)
 
         # Filter the DataFrame by the selected repository type
-        if repository_type != "all":
-            df_repositories = df_repositories.loc[df_repositories["repository_type"] == repository_type.upper()]
+        if repository_type != "All":
+            df_repositories = df_repositories.loc[df_repositories["repository_type"] == repository_type]
 
         # Filter the DataFrame by the selected date range
         df_repositories["created_at"] = pd.to_datetime(df_repositories["created_at"], errors="coerce").dt.tz_localize(
@@ -420,19 +398,52 @@ with repository_tab:
 
             col1a, col1b = st.columns(2)
             for i in range(0, len(selected_rules)):
+                rule_name = selected_rules[i].replace("_", " ").title()
+
                 if i % 2 == 0:
-                    col1a.write(f"- {selected_rules[i].replace('_', ' ').title()}")
+                    col1a.write(f"- {rule_name}")
                 else:
-                    col1b.write(f"- {selected_rules[i].replace('_', ' ').title()}")
+                    col1b.write(f"- {rule_name}")
 
         with st.expander("See Rule Descriptions"):
             st.subheader("Rule Descriptions")
             for rule in rulemap:
-                st.write(f"- {rule['name'].replace('_', ' ').title()}: {rule['description']}")
+                rule_name = rule['name'].replace('_', ' ').title()
+
+                st.write(f"- **{rule_name}:** {rule['description']}")
 
             st.caption(
                 "**Note:** All rules are interpreted from ONS' [GitHub Usage Policy](https://officenationalstatistics.sharepoint.com/sites/ONS%5FDDaT%5FCommunities/Software%20Engineering%20Policies/Forms/AllItems.aspx?id=%2Fsites%2FONS%5FDDaT%5FCommunities%2FSoftware%20Engineering%20Policies%2FSoftware%20Engineering%20Policies%2FApproved%2FPDF%2FGitHub%20Usage%20Policy%2Epdf&parent=%2Fsites%2FONS%5FDDaT%5FCommunities%2FSoftware%20Engineering%20Policies%2FSoftware%20Engineering%20Policies%2FApproved%2FPDF)."
             )
+
+        st.divider()
+
+        st.subheader(":blue-background[Rule Notes]")
+
+        notes_list = []
+
+        for i in range(0, len(selected_rules)):
+            # Get the rule from the rulemap
+            rule = next((
+                item for item in rulemap if item["name"] == selected_rules[i]
+            ), None)
+
+            if rule["note"]:
+                rule_name = rule["name"].replace('_', ' ').title()
+
+                notes_list.append(
+                    f"- **{rule_name}:** {rule["note"]}"
+                )
+
+        if len(notes_list) > 0:
+            col1a, col1b = st.columns(2)
+            
+            for i in range(0, len(notes_list)):
+                if i % 2 == 0:
+                    col1a.write(notes_list[i])
+                else:
+                    col1b.write(notes_list[i])
+                
 
         st.divider()
 
@@ -598,39 +609,88 @@ with secret_tab:
 
     st.write("Alerts open for more than 5 days.")
 
-    col1, col2, col3, col4 = st.columns(4)
+    if len(df_secret_scanning) == 0:
+        st.write("No secret scanning alerts breaking the policy.")
+    else:
+        # Data filters
+        col1, col2, col3 = st.columns([0.4, 0.4, 0.2])
 
-    col1.metric("Total Alerts", total_secret_alerts, border=True)
-    col2.metric("Oldest Alert", oldest_secret_alert, border=True)
-    col3.metric("Number of Repositories", len(df_secret_scanning), border=True)
-    col4.metric("Average Alerts per Repository", round(total_secret_alerts / len(df_secret_scanning)), border=True)
+        ## Date Range Filter
+        start_date = col1.date_input("Start Date", pd.to_datetime(df_secret_scanning["Creation Date"].min()), key="start_date_secrets")
+        end_date = col2.date_input("End Date", (datetime.now() + timedelta(days=1)).date(), key="end_date_secrets")
 
-    col1, col2 = st.columns([0.7, 0.3])
+        st.caption(
+            "**Please Note:** The above date range is used to filter the creation date of secret scanning alerts."
+        )
 
-    col1.metric("Repository with Most Alerts", df_secret_scanning["Name"].iloc[df_secret_scanning["Total Alerts"].idxmax()], border=True)
-    col2.metric("Number of Repository Alerts", df_secret_scanning["Total Alerts"].max(), border=True)
+        if end_date < start_date:
+            st.error("End date cannot be before start date.")
+            st.stop()
 
-    # Pie chart showing the number of alerts by repository
+        df_secret_scanning["Creation Date"] = pd.to_datetime(df_secret_scanning["Creation Date"], errors="coerce").dt.tz_localize(None)
+        df_secret_scanning = df_secret_scanning.loc[
+            (df_secret_scanning["Creation Date"] >= pd.to_datetime(start_date))
+            & (df_secret_scanning["Creation Date"] <= pd.to_datetime(end_date))
+        ]
 
-    fig = px.pie(
-        df_secret_scanning,
-        values="Total Alerts",
-        names="Name",
-        title="Total Alerts by Repository",
-    )
+        ## Repository Type Filter
+        type_list = ["All", "All (Except Archived)", "Public", "Private", "Internal", "Archived"]
+        selected_type = col3.selectbox("Select Repository Type", type_list)
 
-    st.plotly_chart(fig)
+        if selected_type == "All (Except Archived)":
+            df_secret_scanning = df_secret_scanning.loc[df_secret_scanning["Type"] != "Archived"]
+        elif selected_type != "All":
+            df_secret_scanning = df_secret_scanning.loc[df_secret_scanning["Type"] == selected_type]
 
-    st.dataframe(
-        df_secret_scanning, 
-        use_container_width=True, 
-        hide_index=True,
-        column_config={
-            "Link": st.column_config.LinkColumn()
-        }
-    )
+        if len(df_secret_scanning) == 0:
+            st.write("No secret scanning alerts for the selected parameters.")
+        else:
+            total_secret_alerts = df_secret_scanning["Alert Age (Days)"].count()
+            oldest_alert = df_secret_scanning["Alert Age (Days)"].max()
+            total_repositories = df_secret_scanning["Repository"].nunique()
+            alerts_per_repository = total_secret_alerts / total_repositories
+
+            col1, col2, col3, col4 = st.columns(4)
+
+            col1.metric("Total Alerts", total_secret_alerts, border=True)
+            col2.metric("Oldest Alert", oldest_alert, border=True)
+            col3.metric("Number of Repositories", total_repositories, border=True)
+            col4.metric("Average Alerts per Repository", round(alerts_per_repository, 2), border=True)
+
+            df_grouped_secrets = df_secret_scanning[["Repository", "Creation Date"]].groupby("Repository").count()
+            df_grouped_secrets.columns = ["Total Alerts"]
+
+            # Get repository with most alerts from df_grouped_secrets
+            most_alerts_repo = df_grouped_secrets["Total Alerts"].idxmax()
+            most_alerts_count = df_grouped_secrets["Total Alerts"].max()
+
+            col1, col2 = st.columns([0.7, 0.3])
+
+            col1.metric("Repository with Most Alerts", most_alerts_repo, border=True)
+            col2.metric("Number of Repository Alerts", most_alerts_count, border=True)
+
+            # Pie chart showing the number of alerts by repository
+
+            fig = px.pie(
+                df_grouped_secrets.reset_index(),
+                values="Total Alerts",
+                names="Repository",
+                title="Total Alerts by Repository",
+            )
+
+            st.plotly_chart(fig)
+
+            st.dataframe(
+                df_secret_scanning, 
+                use_container_width=True, 
+                hide_index=True,
+                column_config={
+                    "URL": st.column_config.LinkColumn()
+                }
+            )
 
 # Dependabot Analysis Section
+
 
 with dependabot_tab:
     col1, col2 =st.columns([3,1])
@@ -644,128 +704,182 @@ with dependabot_tab:
 
     st.write("Alerts open for more than 5 days (Critical), 15 days (High), 60 days (Medium), 90 days (Low).")
 
-    # Data filters
+    if len(df_dependabot) == 0:
+        st.write("No dependabot alerts breaking the policy.")
+    else:
 
-    col1, col2 = st.columns([0.7, 0.3])
+        # Data filters
 
-    ## Severity Filter
+        col1, col2 = st.columns(2)
 
-    severity_list = ["Critical", "High", "Medium", "Low"]
+        ## Date Range Filter
 
-    selected_severities = col1.multiselect("Select Severities", severity_list, severity_list)
+        start_date = col1.date_input("Start Date", pd.to_datetime(df_dependabot["Creation Date"].min()), key="start_date_dependabot")
+        end_date = col2.date_input("End Date", (datetime.now() + timedelta(days=1)).date(), key="end_date_dependabot")
+        st.caption(
+            "**Please Note:** The above date range is used to filter the creation date of dependabot alerts."
+        )
+        if end_date < start_date:
+            st.error("End date cannot be before start date.")
+            st.stop()
 
-    if len(selected_severities) == 0:
-        st.info("Please select at least one severity to see metrics.")
-        st.stop()
+        df_dependabot["Creation Date"] = pd.to_datetime(df_dependabot["Creation Date"], errors="coerce").dt.tz_localize(None)
+        df_dependabot = df_dependabot.loc[
+            (df_dependabot["Creation Date"] >= pd.to_datetime(start_date))
+            & (df_dependabot["Creation Date"] <= pd.to_datetime(end_date))
+        ]
 
-    severities_to_exclude = []
+        col1, col2 = st.columns([0.7, 0.3])
 
-    for severity in severity_list:
-        if severity not in selected_severities:
-            severities_to_exclude.append(severity)
+        ## Severity Filter
 
-    for severity in severities_to_exclude:
-        df_dependabot[severity + " Alerts"] = 0
+        severity_list = ["Critical", "High", "Medium", "Low"]
 
-        severity = severity.lower()
+        selected_severities = col1.multiselect("Select Severities", severity_list, severity_list)
 
-        df_total_dependabot_alerts[severity] = 0
+        if len(selected_severities) == 0:
+            st.info("Please select at least one severity to see metrics.")
+            st.stop()
 
-    df_dependabot["Total Alerts"] = df_dependabot["Critical Alerts"] + df_dependabot["High Alerts"] + df_dependabot["Medium Alerts"] + df_dependabot["Low Alerts"]
+        severities_to_exclude = []
 
-    # Remove repositories with no alerts
-    df_dependabot = df_dependabot.loc[df_dependabot["Total Alerts"] > 0]
+        for severity in severity_list:
+            if severity not in selected_severities:
+                severities_to_exclude.append(severity)
 
-    ## Repository Type Filter
+        # Filter the DataFrame by the selected severities
+        for severity in severities_to_exclude:
+            df_dependabot = df_dependabot.drop(df_dependabot[df_dependabot["Severity"] == severity].index)
 
-    type_list = ["all", "public", "private", "internal"]
+        ## Repository Type Filter
 
-    selected_type = col2.selectbox("Select Repository Type", type_list)
+        type_list = ["All", "Public", "Private", "Internal", "Archived"]
 
-    if selected_type != "all":
-        df_dependabot = df_dependabot.loc[df_dependabot["Type"] == selected_type.upper()]
+        selected_type = col2.selectbox("Select Repository Type", type_list, key="dependabot_repo_type")
 
-    col1, col2, col3, col4 = st.columns(4)
+        if selected_type != "All":
+            df_dependabot = df_dependabot.loc[df_dependabot["Type"] == selected_type]
 
-    col1.metric("Total Alerts", df_total_dependabot_alerts.iloc[0].sum(axis=0), border=True)
-    col2.metric("Oldest Alert", oldest_dependabot_alert, border=True)
-    col3.metric("Worst Severity", worst_severity_dependabot, border=True)
-    col4.metric("Number of Repositories", len(df_dependabot), border=True)
+        if len(df_dependabot) == 0:
+            st.write("No dependabot alerts for the selected parameters.")
+        else:
 
-    col1, col2, col3, col4 = st.columns(4)
+            total_dependabot_alerts = df_dependabot["Creation Date"].count()
+            oldest_dependabot_alert = (datetime.now() - df_dependabot["Creation Date"].min()).days
 
-    col1.metric("Critical Alerts", df_total_dependabot_alerts["critical"].sum(), border=True)
-    col2.metric("High Alerts", df_total_dependabot_alerts["high"].sum(), border=True)
-    col3.metric("Medium Alerts", df_total_dependabot_alerts["medium"].sum(), border=True)
-    col4.metric("Low Alerts", df_total_dependabot_alerts["low"].sum(), border=True)
+            # Map the severity to a numeric value for sorting
+            severity_map = {
+                "Critical": 4,
+                "High": 3,
+                "Medium": 2,
+                "Low": 1,
+            }
 
-    # Pie chart showing the number of alerts by severity
+            df_dependabot["Severity Numeric"] = df_dependabot["Severity"].map(severity_map)
 
-    # Pivot data to become severity | count
-    df_dependabot_alerts_pivot = df_total_dependabot_alerts.melt(var_name="Severity", value_name="Count")
-
-    fig = px.pie(
-        df_dependabot_alerts_pivot,
-        values="Count",
-        names="Severity",
-        title="Total Alerts by Severity",
-    )
-
-    st.plotly_chart(fig)
-
-    # Hide the columns that are not needed
-    df_dependabot_filtered = df_dependabot.drop(columns=["Critical Alerts", "High Alerts", "Medium Alerts", "Low Alerts"])
-
-    selected_repo = st.dataframe(
-        df_dependabot_filtered,
-        column_order=["Name", "Type", "Oldest Alert", "Worst Severity", "Total Alerts", "Link"],
-        use_container_width=True, 
-        hide_index=True,
-        column_config={
-            "Link": st.column_config.LinkColumn()
-        },
-        selection_mode="single-row",
-        on_select="rerun"
-    )
-
-    if len(selected_repo["selection"]["rows"]) > 0:
-
-        with st.spinner("Loading Repository Information..."):
-
-            selected_repo = selected_repo["selection"]["rows"][0]
-
-            selected_repo = df_dependabot.iloc[selected_repo]
-
-            col1, col2 = st.columns([0.8, 0.2])
-
-            col1.subheader(
-                f":blue-background[{selected_repo['Name']}]"
-            )
-            col2.write(f"[Go to Repository]({selected_repo['Link']})")
-
-            col1, col2, col3 = st.columns(3)
-
-            col1.metric("Oldest Alert", selected_repo["Oldest Alert"], border=True)
-            col2.metric("Worst Severity", selected_repo["Worst Severity"], border=True)
-            col3.metric("Total Alerts", selected_repo["Total Alerts"], border=True)
+            worst_severity_dependabot = df_dependabot.loc[df_dependabot["Severity Numeric"].idxmax(), "Severity"]
+            number_of_repositories = df_dependabot["Repository"].nunique()
 
             col1, col2, col3, col4 = st.columns(4)
 
-            col1.metric("Critical Alerts", selected_repo["Critical Alerts"], border=True)
-            col2.metric("High Alerts", selected_repo["High Alerts"], border=True)
-            col3.metric("Medium Alerts", selected_repo["Medium Alerts"], border=True)
-            col4.metric("Low Alerts", selected_repo["Low Alerts"], border=True)
+            col1.metric("Total Alerts", total_dependabot_alerts, border=True)
+            col2.metric("Oldest Alert", oldest_dependabot_alert, border=True)
+            col3.metric("Worst Severity", worst_severity_dependabot, border=True)
+            col4.metric("Number of Repositories", number_of_repositories, border=True)
 
-            df_alerts_pie = df_dependabot.loc[df_dependabot["Name"] == selected_repo["Name"]].drop(columns=["Name", "Oldest Alert", "Worst Severity", "Link", "Total Alerts"])
+            total_critical_alerts = df_dependabot.loc[df_dependabot["Severity"] == "Critical"].shape[0]
+            total_high_alerts = df_dependabot.loc[df_dependabot["Severity"] == "High"].shape[0]
+            total_medium_alerts = df_dependabot.loc[df_dependabot["Severity"] == "Medium"].shape[0]
+            total_low_alerts = df_dependabot.loc[df_dependabot["Severity"] == "Low"].shape[0]
+
+            col1, col2, col3, col4 = st.columns(4)
+
+            col1.metric("Critical Alerts", total_critical_alerts, border=True)
+            col2.metric("High Alerts", total_high_alerts, border=True)
+            col3.metric("Medium Alerts", total_medium_alerts, border=True)
+            col4.metric("Low Alerts", total_low_alerts, border=True)
+
+            # Pie chart showing the number of alerts by severity
+
+            # Pivot data to become severity | count
+            df_dependabot_grouped_severity = df_dependabot[["Repository", "Severity"]].groupby("Severity").count()
+            df_dependabot_grouped_severity.columns = ["Count"]
 
             fig = px.pie(
-                df_alerts_pie,
-                values=df_alerts_pie.values[0],
-                names=df_alerts_pie.columns,
-                title=f"Total Alerts by Severity for {selected_repo['Name']}",
+                df_dependabot_grouped_severity.reset_index(),
+                values="Count",
+                names="Severity",
+                title="Total Alerts by Severity",
             )
 
             st.plotly_chart(fig)
-            
-    else:
-        st.caption("Select a repository for more information.")
+
+            # Group information by repository
+            df_dependabot_grouped_repository = df_dependabot[["Repository", "Type", "URL", "Severity"]].groupby(["Repository", "Type", "URL"]).count()
+            df_dependabot_grouped_repository.columns = ["Total Alerts"]
+
+            selected_repo = st.dataframe(
+                df_dependabot_grouped_repository.reset_index(),
+                use_container_width=True, 
+                hide_index=True,
+                column_config={
+                    "URL": st.column_config.LinkColumn()
+                },
+                selection_mode="single-row",
+                on_select="rerun"
+            )
+
+            if len(selected_repo["selection"]["rows"]) > 0:
+
+                with st.spinner("Loading Repository Information..."):
+
+                    selected_repo = selected_repo["selection"]["rows"][0]
+
+                    selected_repo = df_dependabot_grouped_repository.reset_index().iloc[selected_repo]["Repository"]
+
+                    selected_repo = df_dependabot.loc[df_dependabot["Repository"] == selected_repo].iloc[0]
+
+                    col1, col2 = st.columns([0.8, 0.2])
+
+                    col1.subheader(
+                        f":blue-background[{selected_repo['Repository']} ({selected_repo['Type'].title()})]"
+                    )
+                    col2.write(f"[Go to Repository]({selected_repo['URL']})")
+
+                    col1, col2, col3 = st.columns(3)
+
+                    df_selected_dependabot = df_dependabot.loc[df_dependabot["Repository"] == selected_repo["Repository"]]
+
+                    oldest_alert = (datetime.now() - df_dependabot.loc[df_dependabot["Repository"] == selected_repo["Repository"], "Creation Date"].min()).days
+                    worst_severity = df_selected_dependabot.loc[df_selected_dependabot["Severity Numeric"].idxmax(), "Severity"]
+
+                    col1.metric("Oldest Alert (Days)", oldest_alert, border=True)
+                    col2.metric("Worst Severity", worst_severity, border=True)
+                    col3.metric("Total Alerts", df_selected_dependabot.count()[0], border=True)
+
+                    col1, col2, col3, col4 = st.columns(4)
+
+                    selected_critical_alerts = df_selected_dependabot.loc[df_selected_dependabot["Severity"] == "Critical"].shape[0]
+                    selected_high_alerts = df_selected_dependabot.loc[df_selected_dependabot["Severity"] == "High"].shape[0]
+                    selected_medium_alerts = df_selected_dependabot.loc[df_selected_dependabot["Severity"] == "Medium"].shape[0]
+                    selected_low_alerts = df_selected_dependabot.loc[df_selected_dependabot["Severity"] == "Low"].shape[0]
+
+                    col1.metric("Critical Alerts", selected_critical_alerts, border=True)
+                    col2.metric("High Alerts", selected_high_alerts, border=True)
+                    col3.metric("Medium Alerts", selected_medium_alerts, border=True)
+                    col4.metric("Low Alerts", selected_low_alerts, border=True)
+
+                    df_alerts_pie = df_selected_dependabot[["Severity", "Creation Date"]].groupby("Severity").count()
+                    df_alerts_pie.columns = ["Total Alerts"]
+
+                    fig = px.pie(
+                        df_alerts_pie.reset_index(),
+                        values="Total Alerts",
+                        names="Severity",
+                        title=f"Total Alerts by Severity for {selected_repo['Repository']}",
+                    )
+
+                    st.plotly_chart(fig)
+                    
+            else:
+                st.caption("Select a repository for more information.")

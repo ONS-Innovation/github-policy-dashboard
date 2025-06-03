@@ -3,84 +3,98 @@
         "name": "inactive",
         "description": "The repository has not been updated in the last year.",
         "is_security_rule": true,
-        "is_policy_rule": true
+        "is_policy_rule": true,
+        "note": ""
     },
     {
         "name": "unprotected_branches",
         "description": "The repository has unprotected branches.",
         "is_security_rule": true,
-        "is_policy_rule": true
+        "is_policy_rule": true,
+        "note": ""
     },
     {
         "name": "unsigned_commits",
         "description": "One of the last 15 commits to this repository is unsigned.",
         "is_security_rule": true,
-        "is_policy_rule": true
+        "is_policy_rule": true,
+        "note": ""
     },
     {
         "name": "readme_missing",
         "description": "The repository does not have a README file.",
         "is_security_rule": false,
-        "is_policy_rule": true
+        "is_policy_rule": true,
+        "note": ""
     },
     {
         "name": "license_missing",
         "description": "The repository does not have a LICENSE file (Public Only).",
         "is_security_rule": false,
-        "is_policy_rule": true
+        "is_policy_rule": true,
+        "note": "This rule is only applicable to public repositories. All private and internal repositories are marked as compliant since the check doesn't apply."
     },
     {
         "name": "pirr_missing",
         "description": "The repository does not have a PIRR file (Private/Internal Only).",
         "is_security_rule": true,
-        "is_policy_rule": true
+        "is_policy_rule": true,
+        "note": "This rule is only applicable to private and internal repositories. All public repositories are marked as compliant since the check doesn't apply."
     },
     {
         "name": "gitignore_missing",
         "description": "The repository does not have a .gitignore file.",
         "is_security_rule": false,
-        "is_policy_rule": true
+        "is_policy_rule": true,
+        "note": ""
     },
     {
         "name": "external_pr",
         "description": "The repository has a pull request from a user which isn't a member of the organisation.",
         "is_security_rule": true,
-        "is_policy_rule": false
+        "is_policy_rule": false,
+        "note": ""
     },
     {
         "name": "breaks_naming_convention",
         "description": "The repository name does not follow ONS naming convention (No Capitals, Special Characters or Spaces).",
         "is_security_rule": false,
-        "is_policy_rule": true
+        "is_policy_rule": true,
+        "note": ""
     },
     {
         "name": "secret_scanning_disabled",
         "description": "The repository does not have secret scanning enabled (Public Only due to GitHub Advanced Security).",
         "is_security_rule": true,
-        "is_policy_rule": true
+        "is_policy_rule": true,
+        "note": "This rule is only applicable to public repositories. All private and internal repositories are marked as compliant since the check doesn't apply."
     },
     {
         "name": "push_protection_disabled",
         "description": "The repository does not have push protection enabled.",
         "is_security_rule": true,
-        "is_policy_rule": true
+        "is_policy_rule": true,
+        "note": "This rule is only applicable to public repositories. All private and internal repositories are marked as compliant since the check doesn't apply."
     },
     {
         "name": "dependabot_disabled",
         "description": "The repository does not have dependabot enabled.",
         "is_security_rule": true,
-        "is_policy_rule": true
+        "is_policy_rule": true,
+        "note": ""
     },
     {
         "name": "codeowners_missing",
         "description": "The repository does not have a CODEOWNERS file.",
         "is_security_rule": false,
-        "is_policy_rule": true
+        "is_policy_rule": true,
+        "note": ""
     },
     {
         "name": "point_of_contact_missing",
         "description": "A contact email address cannot be found from the CODEOWNERS file.",
         "is_security_rule": true,
-        "is_policy_rule": true
+        "is_policy_rule": true,
+        "note": "This rule will only check if a point of contact email address can be found from the CODEOWNERS file. If the CODEOWNERS file is missing, this rule will not be triggered and be marked as compliant."
     }
 ]
