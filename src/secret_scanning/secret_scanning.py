@@ -66,6 +66,8 @@ if len(df_secret_scanning) == 0:
     st.stop()
 
 with st.form("Secret Scanning Filters"):
+    st.subheader(":blue-background[Alert Filters]")
+
     col1, col2 = st.columns(2)
 
     start_date = col1.date_input("Start Date", pd.to_datetime(df_secret_scanning["Creation Date"].min()), key="start_date_secrets")
@@ -87,6 +89,10 @@ with st.form("Secret Scanning Filters"):
 
 if end_date < start_date:
     st.error("End date cannot be earlier than start date.")
+    st.stop()
+
+if len(selected_types) == 0:
+    st.error("Please select at least one repository type.")
     st.stop()
 
 df_secret_scanning = fmt.filter_secret_scanning(
