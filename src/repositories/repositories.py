@@ -61,26 +61,36 @@ with col1:
 with col2:
     st.html(f"<p style='text-align: right; font-size: x-large;'><b>Last Updated:</b> {last_modified}</p>")
     
-st.header("Repository Analysis 📦")
+st.header(":blue-background[Repository Analysis 📦]")
 
-selected_rules = st.multiselect("Select rules", rules, default=rules)
+with st.form("Repository Filters"):
+    st.subheader(":blue-background[Repository Filters]")
 
-repository_type = st.selectbox(
-    "Select repository type",
-    ["All"] + sorted(df_repositories["repository_type"].unique().tolist()),
-    key="repo_repository_type_select"
-)
+    st.caption(
+        "Use the filters below to select the repositories you want to analyse. "
+        "You can filter by repository type, creation date, and the rules you want to check."
+    )
 
-col1, col2 = st.columns(2)
+    selected_rules = st.multiselect("Select Rules", rules, default=rules)
 
-with col1:
-    start_date = st.date_input("Start Date", pd.to_datetime(df_repositories["created_at"].min()), key="start_date_repo")
-with col2:
-    end_date = st.date_input("End Date", (datetime.datetime.now() + datetime.timedelta(days=1)).date(), key="end_date_repo")
+    repository_type = st.selectbox(
+        "Select Repository Type",
+        ["All"] + sorted(df_repositories["repository_type"].unique().tolist()),
+        key="repo_repository_type_select"
+    )
 
-st.caption(
-    "**Please Note:** The above date range is used to filter the creation date of repositories."
-)
+    col1, col2 = st.columns(2)
+
+    with col1:
+        start_date = st.date_input("Start Date", pd.to_datetime(df_repositories["created_at"].min()), key="start_date_repo")
+    with col2:
+        end_date = st.date_input("End Date", (datetime.datetime.now() + datetime.timedelta(days=1)).date(), key="end_date_repo")
+
+    st.caption(
+        "**Please Note:** The above date range is used to filter the creation date of repositories."
+    )
+
+    st.form_submit_button("Apply Filters", use_container_width=True)
 
 if end_date < start_date:
     st.error("End date cannot be before start date.")
