@@ -10,8 +10,8 @@ st.set_page_config(
 
 pg = st.navigation([
     st.Page("./repositories/repositories.py", title="Repositories", icon="📦"),
-    st.Page("./dependabot/dependabot.py", title="Dependabot", icon="🤖"),
     st.Page("./secret_scanning/secret_scanning.py", title="Secret Scanning", icon="🔍"),
+    st.Page("./dependabot/dependabot.py", title="Dependabot", icon="🤖"),
 ])
 
 pg.run()

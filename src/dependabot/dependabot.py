@@ -11,4 +11,4 @@ with col1:
 with col2:
     st.html(f"<p style='text-align: right; font-size: x-large;'><b>Last Updated:</b> {last_modified}</p>")
      
-st.header("Dependabot Analysis 🤖")
+st.header(":blue-background[Dependabot Analysis 🤖]")
