@@ -63,6 +63,31 @@ with col2:
     
 st.header(":blue-background[Repository Analysis 📦]")
 
+st.write("Rule Presets:")
+
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    st.button(
+        "All Rules",
+        on_click=lambda: st.session_state.update({"selected_rules": rules}),
+        use_container_width=True,
+    )
+
+with col2:
+    st.button(
+        "Policy Rules",
+        on_click=lambda: st.session_state.update({"selected_rules": [rule['name'] for rule in rulemap if rule['is_policy_rule']]}),
+        use_container_width=True,
+    )
+
+with col3:
+    st.button(
+        "Security Rules",
+        on_click=lambda: st.session_state.update({"selected_rules": [rule['name'] for rule in rulemap if rule['is_security_rule']]}),
+        use_container_width=True,
+    )
+
 with st.form("Repository Filters"):
     st.subheader(":blue-background[Repository Filters]")
 
@@ -71,7 +96,7 @@ with st.form("Repository Filters"):
         "You can filter by repository type, creation date, and the rules you want to check."
     )
 
-    selected_rules = st.multiselect("Select Rules", rules, default=rules)
+    selected_rules = st.multiselect("Select Rules", rules, default=st.session_state.get("selected_rules", rules), key="repo_rule_select")
 
     repository_type = st.selectbox(
         "Select Repository Type",
