@@ -6,6 +6,7 @@ import boto3
 import github_api_toolkit
 from datetime import timedelta
 from requests import Response
+from typing import Tuple
 
 def get_environment_variables() -> dict:
     """
@@ -94,8 +95,12 @@ def get_rest_interface(_secret_manager, secret_name: str, org: str, client_id: s
     return rest
 
 @st.cache_data(ttl=timedelta(hours=1))
-def get_github_repository_types(_rest: github_api_toolkit.github_interface, org: str, repository_list: list = None) -> dict:
-    """Retrieves the types of repositories in a GitHub organization.
+def get_github_repository_information(
+    _rest: github_api_toolkit.github_interface, 
+    org: str, 
+    repository_list: list = None
+) -> Tuple[dict, dict]:
+    """Retrieves additional information about repositories in a GitHub organization (Repository Type and Archived Status).
 
     Args:
         ql (github_api_toolkit.github_graphql_interface): The GraphQL interface for GitHub API.
@@ -103,7 +108,9 @@ def get_github_repository_types(_rest: github_api_toolkit.github_interface, org:
         repository_list (list, optional): A list of specific repositories to check. If None, all repositories in the organization are checked.
 
     Returns:
-        dict: A dictionary mapping repository names to their types.
+        Tuple[dict, dict]: A tuple containing two dictionaries:
+            - repo_types: A dictionary mapping repository names to their types (Public, Internal, Private).
+            - archived_status: A dictionary mapping repository names to their archived status (Archived, Not Archived).
     """
 
     if repository_list:
@@ -111,6 +118,7 @@ def get_github_repository_types(_rest: github_api_toolkit.github_interface, org:
         # This is useful since Secret Scanning will only return a handful of repositories
 
         repo_types = {}
+        archived_status = {}
 
         for repo in repository_list:
             response = _rest.get(f"/repos/{org}/{repo}")
@@ -118,10 +126,13 @@ def get_github_repository_types(_rest: github_api_toolkit.github_interface, org:
             if type(response) is not Response:
                 print(f"Error retrieving repository {repo}: {response}")
                 repo_types[repo] = "Unknown"
+                archived_status[repo] = "Unknown"
             else:
                 repository = response.json()
                 repository_type = repository.get("visibility", "Unknown").title()
                 repo_types[repo] = repository_type
+
+                archived_status[repo] = "Archived" if repository.get("archived", False) else "Not Archived"
 
     else:
         # If no specific list is provided, retrieve all repositories in the organization
@@ -129,13 +140,14 @@ def get_github_repository_types(_rest: github_api_toolkit.github_interface, org:
         # There will be less API calls doing 100 repositories at a time than each repository individually
 
         repo_types = {}
+        archived_status = {}
         repository_list = []
 
         response = _rest.get(f"/orgs/{org}/repos", params={"per_page": 100})
 
         if type(response) is not Response:
             print(f"Error retrieving repositories: {response}")
-            return repo_types
+            return repo_types, archived_status
         else:
             try:
                 last_page = int(response.links["last"]["url"].split("=")[-1])
@@ -157,5 +169,7 @@ def get_github_repository_types(_rest: github_api_toolkit.github_interface, org:
             repository_name = repo.get("name")
             repository_type = repo.get("visibility", "Unknown").title()
             repo_types[repository_name] = repository_type
+
+            archived_status[repository_name] = "Archived" if repo.get("archived", False) else "Not Archived"
     
-    return repo_types
+    return repo_types, archived_status

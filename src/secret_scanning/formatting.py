@@ -5,17 +5,17 @@ import pandas as pd
 from datetime import datetime, timedelta
 import boto3
 
-from utilities import get_rest_interface, get_github_repository_types
+from utilities import get_rest_interface, get_github_repository_information
 
 @st.cache_data(ttl=timedelta(hours=1))
-def add_repository_type(
+def add_repository_information(
     df_secret_scanning: pd.DataFrame,
     _secret_manager: boto3.client,
     secret_name: str,
     org: str,
     client_id: str,
 ) -> pd.DataFrame:
-    """Add repository type to the secret scanning DataFrame.
+    """Add additional repository information to the secret scanning DataFrame.
 
     Args:
         df_secret_scanning (pd.DataFrame): The DataFrame containing secret scanning data.
@@ -35,7 +35,7 @@ def add_repository_type(
         client_id=client_id,
     )
 
-    repo_types = get_github_repository_types(
+    repo_types, archived_status = get_github_repository_information(
         _rest=rest,
         org=org,
         repository_list=df_secret_scanning["Repository"].unique().tolist(),
@@ -43,6 +43,9 @@ def add_repository_type(
 
     # Add a new column for repository type
     df_secret_scanning["Repository Type"] = df_secret_scanning["Repository"].map(repo_types)
+
+    # Add a new column for archived status
+    df_secret_scanning["Archived Status"] = df_secret_scanning["Repository"].map(archived_status)
 
     return df_secret_scanning
 
@@ -52,6 +55,7 @@ def filter_secret_scanning(
     start_date: pd.Timestamp,
     end_date: pd.Timestamp,
     types_to_exclude: list,
+    archived_status: str,
 ) -> pd.DataFrame:
     """Filter secret scanning data based on user inputs.
 
@@ -60,6 +64,7 @@ def filter_secret_scanning(
         start_date (pd.Timestamp): The start date for filtering.
         end_date (pd.Timestamp): The end date for filtering.
         types_to_exclude (list): The types of repository to filter by.
+        archived_status (str): The archived status to filter by. Options are "All", "Archived", or "Not Archived".
 
     Returns:
         pd.DataFrame: A filtered DataFrame based on the provided criteria.
@@ -73,6 +78,11 @@ def filter_secret_scanning(
     for type_to_exclude in types_to_exclude:
         df_secret_scanning = df_secret_scanning.loc[
             df_secret_scanning["Repository Type"] != type_to_exclude
+        ]
+
+    if archived_status != "All":
+        df_secret_scanning = df_secret_scanning.loc[
+            df_secret_scanning["Archived Status"] == archived_status
         ]
 
     return df_secret_scanning

@@ -39,7 +39,7 @@ rest = utils.get_rest_interface(
     client_id=env["client_id"]
 )
 
-df_dependabot = fmt.add_repository_type(
+df_dependabot = fmt.add_repository_information(
     df_dependabot=df_dependabot,
     _secret_manager=secret_manager,
     secret_name=env["secret_name"],
@@ -76,19 +76,25 @@ with st.form("Dependabot Filters"):
         "**Please Note:** The above date range is used to filter the creation date of dependabot alerts."
     )
 
-    col1, col2 = st.columns(2)
-
     severity_list = ["Critical", "High", "Medium", "Low"]
+    selected_severities = st.multiselect("Select Severities", severity_list, severity_list)
 
-    selected_severities = col1.multiselect("Select Severities", severity_list, severity_list)
+    col1, col2 = st.columns([0.6, 0.4])
 
-    type_list = df_dependabot["Repository Type"].unique().tolist()
-
-    selected_types = col2.multiselect(
+    type_list = ["Public", "Internal", "Private"]
+    selected_types = col1.multiselect(
         "Repository Type",
         type_list,
         default=type_list,
         key="repo_type_dependabot"
+    )
+
+    archived_list = ["All", "Archived", "Not Archived"]
+    archived_status = col2.selectbox(
+        "Archived Status",
+        archived_list,
+        index=0,
+        key="archived_status_dependabot"
     )
 
     st.form_submit_button("Apply Filters", use_container_width=True)
@@ -111,6 +117,7 @@ df_dependabot = fmt.filter_dependabot(
     end_date=end_date,
     severities_to_exclude=[s for s in severity_list if s not in selected_severities],
     types_to_exclude=[t for t in type_list if t not in selected_types],
+    archived_status=archived_status,
 )
 
 df_dependabot = fmt.add_dependabot_calculations(
