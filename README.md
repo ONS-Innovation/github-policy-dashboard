@@ -1,4 +1,5 @@
 # GitHub Policy Dashboard
+
 A dashboard which uses organisation data from the GitHub API to monitor how well policy is adhered to in ONS.
 
 ## Overview
@@ -6,7 +7,7 @@ A dashboard which uses organisation data from the GitHub API to monitor how well
 This repository contains 2 main elements:
 
 - A Streamlit Dashboard to visualise policy data from S3.
-- An AWS Lambda Data Logger to collect information from GitHub to be used by the dashboard.
+- An AWS Lambda Data Logger to collect information from GitHub to be used by the dashboard ([README](./data_logger/README.md)).
 
 ## Table of Contents
 
@@ -26,12 +27,15 @@ This repository contains 2 main elements:
       - [Running the Terraform](#running-the-terraform)
       - [Provision Users](#provision-users)
     - [Updating the running service using Terraform](#updating-the-running-service-using-terraform)
-    - [Destroy the Main Service Resources](#destroy-the-main-service-resources)
   - [Linting and Formatting](#linting-and-formatting)
+    - [Markdown Linting](#markdown-linting)
+      - [Usage](#usage)
+      - [`.markdownlint.json` Configuration](#markdownlintjson-configuration)
+      - [Markdownlint GitHub Action](#markdownlint-github-action)
   - [Future Development](#future-development)
 
-
 ## Prerequisites
+
 This project uses poetry for package management and colima/docker for containerisation.
 
 [Instructions to install Poetry](https://python-poetry.org/docs/)
@@ -56,95 +60,78 @@ export AWS_ACCESS_KEY_ID=<aws_access_key_id>
 export AWS_SECRET_ACCESS_KEY=<aws_secret_access_key_id> 
 export AWS_DEFAULT_REGION=eu-west-2 
 export AWS_SECRET_NAME=<aws_secret_name> 
-export GITHUB_ORG=ONSDigital 
+export GITHUB_ORG=ONS-Innovation 
 export GITHUB_APP_CLIENT_ID=<github_app_client_id>
-export AWS_ACCOUNT_NAME=sdp-sandbox
+export AWS_ACCOUNT_NAME=sdp-dev
 ```
 
 1. Navigate into the project's folder and create a virtual environment using `python3 -m venv venv`
 2. Activate the virtual environment using `source venv/bin/activate`
 3. Install all project dependancies using `make install`
-4. When running the project locally, you need to edit `get_s3_client()` within `app.py`.
-
-When creating an instance of `boto3.Session()`, you must pass which AWS credential profile to use, as found in `~/.aws/credentials`.
-
-When running locally:
-
-```
-session = boto3.Session(profile_name="<profile_name>")
-s3 = session.client("s3")
-```
-
-When running from a container:
-
-```
-session = boto3.Session()
-s3 = session.client("s3")
-```
-
-5. Run the project using `streamlit run src/app.py`
+4. Run the project using `streamlit run src/app.py`
 
 ## Setup - Running in a container
+
 1. Build a Docker Image
 
-```
-    docker build -t github-audit-dashboard .
-```
+    ```bash
+    docker build -t github-policy-dashboard .
+    ```
 
 2. Check the image exists
 
-```
+    ```bash
     docker images
-```
+    ```
 
-Example Output:
+    Example Output:
 
-```
-REPOSITORY                                                                 TAG         IMAGE ID       CREATED          SIZE
-github-audit-dashboard                                                     latest      9a9cb9286a7f   51 seconds ago   906MB
-```
+    ```bash
+    REPOSITORY                                                                 TAG         IMAGE ID       CREATED          SIZE
+    github-policy-dashboard                                                    latest      9a9cb9286a7f   51 seconds ago   906MB
+    ```
 
 3. Run the image locally mapping local port 8501 to container port 8501 and passing in AWS credentials to access a .pem file from AWS Secrets Manager while running container.
 These credentials should also allow access to S3.
 
-```
-docker run -p 8501:8501 \
--e AWS_ACCESS_KEY_ID=<aws_access_key_id> \
--e AWS_SECRET_ACCESS_KEY=<aws_secret_access_key_id> \
--e AWS_DEFAULT_REGION=eu-west-2 \
--e AWS_SECRET_NAME=<aws_secret_name> \
--e GITHUB_ORG=ONS-Innovation \
--e GITHUB_APP_CLIENT_ID=<github_app_client_id> \
--e AWS_ACCOUNT_NAME=sdp-sandbox 
-github-audit-dashboard
-```
+    ```bash
+    docker run -p 8501:8501 \
+    -e AWS_ACCESS_KEY_ID=<aws_access_key_id> \
+    -e AWS_SECRET_ACCESS_KEY=<aws_secret_access_key_id> \
+    -e AWS_DEFAULT_REGION=eu-west-2 \
+    -e AWS_SECRET_NAME=<aws_secret_name> \
+    -e GITHUB_ORG=ONS-Innovation \
+    -e GITHUB_APP_CLIENT_ID=<github_app_client_id> \
+    -e AWS_ACCOUNT_NAME=sdp-dev 
+    github-policy-dashboard
+    ```
 
 4. Check the container is running
 
-```
-docker ps
-```
+    ```bash
+    docker ps
+    ```
 
-Example Output:
+    Example Output:
 
-```
-CONTAINER ID   IMAGE                    COMMAND                  CREATED         STATUS         PORTS                                       NAMES
-92e40251aa4c   github-audit-dashboard   "poetry run streamli…"   2 minutes ago   Up 2 minutes   0.0.0.0:8501->8501/tcp, :::8501->8501/tcp   strange_bhaskara
-```
+    ```bash
+    CONTAINER ID   IMAGE                    COMMAND                  CREATED         STATUS         PORTS                                       NAMES
+    92e40251aa4c   github-policy-dashboard  "poetry run streamli…"   2 minutes ago   Up 2 minutes   0.0.0.0:8501->8501/tcp, :::8501->8501/tcp   strange_bhaskara
+    ```
 
 5. To view the running in a browser app navigate to
 
-```
-You can now view your Streamlit app in your browser.
+    ```bash
+    You can now view your Streamlit app in your browser.
 
-URL: http://0.0.0.0:8501
-```
+    URL: http://0.0.0.0:8501
+    ```
 
 6. To stop the container, use the container ID
 
-```
-docker stop 92e40251aa4c
-```
+    ```bash
+    docker stop 92e40251aa4c
+    ```
 
 ## Storing the container on AWS Elastic Container Registry (ECR)
 
@@ -270,101 +257,49 @@ An email invite will be sent to the selected email address along with a one-time
 
 ### Updating the running service using Terraform
 
-If the application has been modified then the following can be performed to update the running service:
+Terraform is used to update the running service.
 
-- Build a new version of the container image and upload to ECR as per the instructions earlier in this guide.
-- Change directory to the **service terraform**
+The process is provided within the team's documentation repository: [keh-central-documentation/terraform/COMMANDS.md](https://github.com/ONS-Innovation/keh-central-documentation/blob/main/terraform/COMMANDS.md)
 
-  ```bash
-  cd terraform/service
-  ```
+This covers how to:
 
-- In the appropriate environment variable file env/sandbox/sandbox.tfvars, env/dev/dev.tfvars or env/prod/prod.tfvars
-  - Change the _container_ver_ variable to the new version of your container.
-  - Change the _force_deployment_ variable to _true_.
-
-- Initialise terraform for the appropriate environment config file _backend-dev.tfbackend_ or _backend-prod.tfbackend_ run:
-
-  ```bash
-  terraform init -backend-config=env/dev/backend-dev.tfbackend -reconfigure
-  ```
-
-  The reconfigure options ensures that the backend state is reconfigured to point to the appropriate S3 bucket.
-
-  **_Please Note:_** This step requires an **AWS_ACCESS_KEY_ID** and **AWS_SECRET_ACCESS_KEY** to be loaded into the environment if not already in place.
-  This can be done using:
-
-  ```bash
-  export AWS_ACCESS_KEY_ID="<aws_access_key_id>"
-  export AWS_SECRET_ACCESS_KEY="<aws_secret_access_key>"
-  ```
-
-- Refresh the local state to ensure it is in sync with the backend
-
-  ```bash
-  terraform refresh -var-file=env/dev/dev.tfvars
-  ```
-
-- Plan the changes, ensuring you use the correct environment config (depending upon which env you are configuring):
-
-  E.g. for the dev environment run
-
-  ```bash
-  terraform plan -var-file=env/dev/dev.tfvars
-  ```
-
-- Apply the changes, ensuring you use the correct environment config (depending upon which env you are configuring):
-
-  E.g. for the dev environment run
-
-  ```bash
-  terraform apply -var-file=env/dev/dev.tfvars
-  ```
-
-- When the terraform has applied successfully the running task will have been replaced by a task running the container version you specified in the tfvars file
-
-### Destroy the Main Service Resources
-
-Delete the service resources by running the following ensuring your reference the correct environment files for the backend-config and var files:
-
-  ```bash
-  cd terraform/service
-
-  terraform init -backend-config=env/dev/backend-dev.tfbackend -reconfigure
-
-  terraform refresh -var-file=env/dev/dev.tfvars
-
-  terraform destroy -var-file=env/dev/dev.tfvars
-  ```
+- Update any of the running services using Terraform
+- Destroy the running service using Terraform
 
 ## Linting and Formatting
 
 To view all commands
+
 ```bash
 make all
 ```
 
 Linting tools must first be installed before they can be used
+
 ```bash
 make install-dev
 ```
 
 To clean residue files
+
 ```bash
 make clean
 ```
 
 To format your code
+
 ```bash
 make format
 ```
 
 To run all linting tools
+
 ```bash
 make lint
 ```
 
 To run a specific linter (black, ruff, pylint)
+
 ```bash
 make black
 make ruff
@@ -372,15 +307,48 @@ make pylint
 ```
 
 To run mypy (static type checking)
+
 ```bash
 make mypy
 ```
 
+### Markdown Linting
+
+To lint the markdown files in this repository, we use `markdownlint-cli`. This repository uses the Dockerised version of the linter, allowing it to be run without needing to install it locally.
+
+The tool is available on GitHub at [markdownlint-cli](https://github.com/igorshubovych/markdownlint-cli)
+
+#### Usage
+
+To run the linter:
+
+```bash
+make md_lint
+```
+
+To automatically fix any issues found by the linter:
+
+```bash
+make md_fix
+```
+
+#### `.markdownlint.json` Configuration
+
+The `.markdownlint.json` file in the root of the repository contains the configuration for markdownlint. This file is used to set the rules and settings for linting markdown files.
+
+Currently, MD013 (line length) is disabled. This is because the default line length of 80 characters is too restrictive.
+
+For a full list of rules, see [Markdownlint Rules / Aliases](https://github.com/DavidAnson/markdownlint?tab=readme-ov-file#rules--aliases)
+
+#### Markdownlint GitHub Action
+
+This repository uses GitHub Actions to run markdownlint on every push and pull request. The workflow file is located in the `.github/workflows` directory.
+
+The workflow will run markdownlint on all markdown files in the repository. If any linting errors are found, the workflow will fail and provide a report of the errors.
+
 ## Future Development
 
-This repository still needs the following implemented:
-
-- Linting
-- Testing to a 95% coverage
-- MkDocs documentation refactor / rewrite
-- General repository clean up
+- There are plans to migrate the dashboard to become part of the Digital Landscape. This would incur the Streamlit UI being removed from this repository and
+  being rewritten in React.
+- The data logger will remain in this repository but will undergo a rewrite to improve code quality and adhere to best practices - making use of linting tools
+  and introducing robust testing coverage.
