@@ -1,5 +1,3 @@
 # Secret Scanning
 
 ## Overview
-
-

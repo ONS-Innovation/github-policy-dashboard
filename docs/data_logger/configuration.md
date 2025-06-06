@@ -25,7 +25,7 @@ To test the Data Logger locally, the following `features` should be set accordin
 
 The different collection features can be toggled on or off to control which data is collected. If only making changes to a single collection type, you can set the others to `false` to speed up the local testing process.
 
-## Configuration Options
+##  Configuration Options
 
 ### Features
 
@@ -108,4 +108,4 @@ This threshold controls how many years a repository can go without updates befor
 
 #### Signed Commit Number
 
-This setting controls how many commits are checked when applying the signed commit policy check. This value has been agreed between stakeholders. 
+This setting controls how many commits are checked when applying the signed commit policy check. This value has been agreed between stakeholders.

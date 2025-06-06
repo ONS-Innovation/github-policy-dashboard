@@ -1,6 +1,6 @@
 # Rule Mapping
 
-## Overview
+##  Overview
 
 In order to add more information about the rules applied to repositories, `rulemap.json` is used. This allows the tool to connect each check in `repositories.json` with additional information about the rule, such as a description and the preset it applies to.
 
@@ -8,7 +8,7 @@ In order to add more information about the rules applied to repositories, `rulem
 
 All rules on the dashboard are derived from ONS' GitHub Usage Policy. This is available on Sharepoint at [GitHub Usage Policy](https://officenationalstatistics.sharepoint.com/sites/ONS_DDaT_Communities/Software%20Engineering%20Policies/Forms/AllItems.aspx?id=%2Fsites%2FONS%5FDDaT%5FCommunities%2FSoftware%20Engineering%20Policies%2FSoftware%20Engineering%20Policies%2FApproved%2FPDF%2FGitHub%20Usage%20Policy%2Epdf&parent=%2Fsites%2FONS%5FDDaT%5FCommunities%2FSoftware%20Engineering%20Policies%2FSoftware%20Engineering%20Policies%2FApproved%2FPDF) (requires ONS network access).
 
-## Format
+##  Format
 
 The `rulemap.json` file is a JSON object containing an array of rule objects. Each rule object has the following structure:
 
@@ -24,7 +24,7 @@ The `rulemap.json` file is a JSON object containing an array of rule objects. Ea
 ]
 ```
 
-### Fields
+###  Fields
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -34,7 +34,7 @@ The `rulemap.json` file is a JSON object containing an array of rule objects. Ea
 | `is_policy_rule` | bool | Indicates if the rule is a policy rule. If true, the rule will be included in the Policy Preset. |
 | `note` | String | Additional notes or comments about the rule. This is mainly used to explain what happens to repositories that the check doesn't run on (i.e. if a check is only for public repositories, this rule would explain that private/internal repositories automatically pass the check). |
 
-### Example
+###  Example
 
 ```json
 [
@@ -59,7 +59,7 @@ More example can be found in the file itself, which is located in the root of th
 
 ## Adding Rules
 
-### Backend Changes 
+### Backend Changes
 
 First you must create the new rule in the Data Logger. In `data_logger/src/main.py`, there is a function called `get_repository_batch()`. This function is where the final data structure of `repositories.json` is created. You can add your new rule to the `repository_data` dictionary in this function and put the logic in its own function (if possible in `policy_checks.py`).
 

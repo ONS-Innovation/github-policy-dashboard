@@ -16,11 +16,11 @@ When collecting the repository data, each repository is ran through a series of 
 
 This process uses the maximum number of threads specified in the configuration file. Before starting the threads, the Data Logger will collect the total number of repositories to process and divide them into batches based on the number of threads available. Each thread will then process its assigned batch of repositories concurrently.
 
-Collecting repository data is the most time-consuming operation in the Data Logger, due to the number of API calls required for each repository. 
+Collecting repository data is the most time-consuming operation in the Data Logger, due to the number of API calls required for each repository.
 
 ### `dependabot.json`
 
-When collecting Dependabot data, the Data Logger will assign a single thread to each severity of Dependabot alert. This means that only 4 threads will be used for this operation, regardless of the number of threads specified in the configuration file. A thread will be created for each of the following severities: 
+When collecting Dependabot data, the Data Logger will assign a single thread to each severity of Dependabot alert. This means that only 4 threads will be used for this operation, regardless of the number of threads specified in the configuration file. A thread will be created for each of the following severities:
 
 - Critical
 - High
