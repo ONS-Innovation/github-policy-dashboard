@@ -1,6 +1,8 @@
 # A GitHub Action to run Markdown linting on pull requests and pushes using markdownlint.
 ---
 name: Markdown Lint
+permissions:
+  contents: read
 on:
   pull_request:
     branches:
