@@ -6,7 +6,7 @@ In order to add more information about the rules applied to repositories, `rulem
 
 ## Where do the rules come from?
 
-All rules on the dashboard are derived from ONS' GitHub Usage Policy. This is available on Sharepoint at [GitHub Usage Policy](https://officenationalstatistics.sharepoint.com/sites/ONS_DDaT_Communities/Software%20Engineering%20Policies/Forms/AllItems.aspx?id=%2Fsites%2FONS%5FDDaT%5FCommunities%2FSoftware%20Engineering%20Policies%2FSoftware%20Engineering%20Policies%2FApproved%2FPDF%2FGitHub%20Usage%20Policy%2Epdf&parent=%2Fsites%2FONS%5FDDaT%5FCommunities%2FSoftware%20Engineering%20Policies%2FSoftware%20Engineering%20Policies%2FApproved%2FPDF) (requires ONS network access).
+All rules on the dashboard are derived from ONS' GitHub Usage Policy.
 
 ##  Format
 
@@ -97,7 +97,7 @@ Then in `rulemap.json`, you would add:
 }
 ```
 
-A new check should now appear in the Dashboard under the appropriate preset.
+A new check should now appear in the dashboard under the appropriate preset.
 
 ## Changing Rule Presets
 

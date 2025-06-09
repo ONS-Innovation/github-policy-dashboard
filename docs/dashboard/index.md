@@ -15,7 +15,7 @@ Displays the compliance status of repositories against the GitHub Usage Policy.
 - **Filter Repositories:** Allows users to filter repositories based on a range of parameters.
 - **Rule Presets:** Provides predefined sets of rules for quick compliance checks.
 - **Display Rule Details:** Shows detailed information about each rule - promoting better understanding of compliance.
-- **Organisation Overview:** Offers a high-level view of the organization's compliance status, including which rule is broken the most.
+- **Organisation Overview:** Offers a high-level view of the organisation's compliance status, including which rule is broken the most.
 - **Repository Details:** Provides detailed information about individual repositories, including their compliance status and the rules they violate.
 - **Point of Contact:** Displays the point of contact for each repository, facilitating communication regarding compliance issues.
 
@@ -26,7 +26,7 @@ Displays the compliance status of repositories against the GitHub Usage Policy.
 Provides metrics on Secret Scanning alerts.
 
 - **Filter Alerts:** Allows users to filter alerts based on a range of parameters.
-- **Organisation Overview:** Offers a high-level view of the organization's secret scanning alerts, including the oldest open alert.
+- **Organisation Overview:** Offers a high-level view of the organisation's secret scanning alerts, including the oldest open alert.
 - **Respository Proportion:** Displays the proportion of repositories with secret scanning alerts - allowing users to highlight the organisation's worst repositories.
 - **Alert Details:** Shows information about individual alerts, promoting users to take action on them.
 
@@ -37,7 +37,7 @@ Provides metrics on Secret Scanning alerts.
 Displays metrics on Dependabot alerts.
 
 - **Filter Alerts:** Allows users to filter alerts based on a range of parameters.
-- **Organisation Overview:** Offers a high-level view of the organization's Dependabot alerts, including the oldest open alert and worst severity.
+- **Organisation Overview:** Offers a high-level view of the organisation's Dependabot alerts, including the oldest open alert and worst severity.
 - **Severity Proportion:** Displays the proportion of alerts by severity, allowing users to focus on the most critical issues.
 - **Repository Overview:** Provides a high-level view of the repositories with Dependabot alerts, including the number of alerts and their severity.
 - **Repository Severity Proportion:** Displays the proportion of alerts by severity for each repository, allowing users to identify the most critical issues.

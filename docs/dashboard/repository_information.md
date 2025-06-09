@@ -7,7 +7,7 @@ Dependabot and Secret Scanning alerts are collected from their respective GitHub
 - **Secret Scanning**: [`GET /orgs/{org}/secret-scanning/alerts`](https://docs.github.com/en/rest/secret-scanning/secret-scanning?apiVersion=2022-11-28#list-secret-scanning-alerts-for-an-organization)
 - **Dependabot**: [`GET /orgs/{org}/dependabot/alerts`](https://docs.github.com/en/rest/dependabot/alerts?apiVersion=2022-11-28#list-dependabot-alerts-for-an-organization)
 
-These endpoints list all alerts for the organization. The endpoint contains the name of the repository they belong to, but, unfortunately, does not contain the repository's visibility (public/private/internal) or if the repository is archived or not.
+These endpoints list all alerts for the organisation. The endpoint contains the name of the repository they belong to, but, unfortunately, does not contain the repository's visibility (public/private/internal) or if the repository is archived or not.
 
 This information is important to allow users to filter alerts appropriately, for example, any public Secret Scanning alerts are much more of a risk than private ones. We want users to be able to highlight these sorts of issues.
 
