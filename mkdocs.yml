@@ -5,10 +5,20 @@ repo_name: GitHub Policy Dashboard
 
 nav:
   - Home: 'index.md'
-  - 'Initial Designs':
-    - Requirement Scoping: 'initial_scoping.md'
-    - Screen Designs: 'screen_designs.md'
   - Documentation: 'documentation.md'
+  - Services:
+    - Dashboard: 
+      - Overview: 'dashboard/index.md'
+      - Rule Mapping: 'dashboard/rulemap.md'
+      - Repository Data Collection: 'dashboard/repository_information.md'
+    - Data Logger:
+      - Overview: 'data_logger/index.md'
+      - Configuration: 'data_logger/configuration.md'
+      - Data Collection: 
+        - Repositories: 'data_logger/repositories.md'
+        - Secret Scanning: 'data_logger/secret_scanning.md'
+        - Dependabot: 'data_logger/dependabot.md'
+      - Threading: 'data_logger/threading.md'
 
 theme:
   name: material
@@ -44,8 +54,6 @@ theme:
 
     - header.autohide
     - content.code.copy
-
-  
 
   logo: assets/logo.png
   favicon: assets/favicon.ico

@@ -63,3 +63,13 @@ install-dev:  ## Install the dependencies including dev.
 .PHONY: run-local
 run-local:  ## Run locally.
 	streamlit run src/app.py
+
+.PHONY: md_lint
+md_lint: ## Lint Markdown files using Markdownlint.
+	sh shell_scripts/md_lint.sh
+	@echo "Markdownlint can fix some issues automatically. To fix them, run 'make md_fix'.";
+
+.PHONY: md_fix
+md_fix: ## Fix Markdown files using Markdownlint.
+	sh shell_scripts/md_fix.sh
+	
