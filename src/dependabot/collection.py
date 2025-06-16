@@ -29,13 +29,20 @@ def load_dependabot(_s3, bucket: str) -> pd.DataFrame | None:
 
     df_dependabot = pd.json_normalize(json_data)
 
+    if df_dependabot.empty:
+        return None
+
     # Rename the columns to be more readable
     df_dependabot.columns = [
         "Repository",
         "URL",
         "Creation Date",
         "Severity",
+        "Alert URL",
     ]
+
+    # Remove alert URL since it isn't used (Database requirement only)
+    df_dependabot = df_dependabot.drop(columns=["Alert URL"])
 
     # Add Alert Age (Days) to the DataFrame
     df_dependabot["Alert Age (Days)"] = datetime.now() - pd.to_datetime(df_dependabot["Creation Date"]).dt.tz_localize(None)

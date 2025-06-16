@@ -29,6 +29,9 @@ def load_secret_scanning(_s3, bucket: str) -> pd.DataFrame | None:
 
     df_secret_scanning = pd.json_normalize(json_data)
 
+    if df_secret_scanning.empty:
+        return None
+
     # Rename the columns to be more readable
     df_secret_scanning.columns = [
         "Repository",

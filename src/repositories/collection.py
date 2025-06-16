@@ -28,6 +28,9 @@ def load_repositories(_s3, bucket: str) -> pd.DataFrame | None:
 
     df_repositories = pd.json_normalize(json_data)
 
+    if df_repositories.empty:
+        return None
+
     # Update repository_type to be title case
     df_repositories["type"] = df_repositories["type"].str.title()
 
