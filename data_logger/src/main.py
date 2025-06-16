@@ -758,7 +758,8 @@ def process_dependabot_alerts(response_json: dict, threshold: int) -> list[dict]
                 "repository": alert["repository"]["name"],
                 "repository_url": alert["repository"]["html_url"],
                 "created_at": alert["created_at"],
-                "severity": alert["security_advisory"]["severity"]
+                "severity": alert["security_advisory"]["severity"],
+                "alert_url": alert["html_url"],
             }
 
             dependabot_data.append(formatted_alert)
