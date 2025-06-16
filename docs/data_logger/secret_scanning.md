@@ -14,7 +14,7 @@ This dataset includes all open alerts within the threshold, regardless of whethe
         "repository": "{repo}",
         "repository_url": "https://github.com/{org}/{repo}",
         "creation_date": "2024-12-11T23:54:00Z",
-        "url": "https://github.com/{org}/{repo}/security/secret-scanning/{alert_id}"
+        "alert_url": "https://github.com/{org}/{repo}/security/secret-scanning/{alert_id}"
     },
 ]
 ```
