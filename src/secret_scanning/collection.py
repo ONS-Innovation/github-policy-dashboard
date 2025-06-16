@@ -32,9 +32,13 @@ def load_secret_scanning(_s3, bucket: str) -> pd.DataFrame | None:
     # Rename the columns to be more readable
     df_secret_scanning.columns = [
         "Repository",
+        "Repository URL",
         "Creation Date",
         "URL",
     ]
+
+    # Remove repository URL since it isn't used (Database requirement only)
+    df_secret_scanning = df_secret_scanning.drop(columns=["Repository URL"])
 
     # Add Alert Age (Days) to the DataFrame
     df_secret_scanning["Alert Age (Days)"] = datetime.now() - pd.to_datetime(df_secret_scanning["Creation Date"]).dt.tz_localize(None)

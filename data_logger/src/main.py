@@ -899,8 +899,9 @@ def get_secret_scanning_data(logger: wrapped_logging, rest: github_api_toolkit.g
 
             formatted_alert = {
                 "repository": alert["repository"]["name"],
+                "repository_url": alert["repository"]["html_url"],
                 "creation_date": alert["created_at"],
-                "url": alert["html_url"]
+                "alert_url": alert["html_url"],
             }
 
             secret_scanning_data.append(formatted_alert)
