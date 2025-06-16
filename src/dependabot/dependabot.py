@@ -30,6 +30,7 @@ df_dependabot = collection.load_dependabot(
 
 if df_dependabot is None:
     st.error("Error loading Dependabot data. Please check the S3 bucket and file.")
+    st.stop()
 
 
 rest = utils.get_rest_interface(

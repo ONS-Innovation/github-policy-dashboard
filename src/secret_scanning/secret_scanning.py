@@ -30,6 +30,7 @@ df_secret_scanning = collection.load_secret_scanning(
 
 if df_secret_scanning is None:
     st.error("Error loading secret scanning data. Please check the S3 bucket and file.")
+    st.stop()
 
 
 rest = utils.get_rest_interface(
