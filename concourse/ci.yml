@@ -3,29 +3,16 @@ resources:
   type: git
   icon: github
   source:
-    uri: https://github.com/ONS-Innovation/keh-github-scraper-batch
+    uri: https://github.com/ONS-Innovation/github-policy-dashboard
     username: ((github_access_token))
     password: x-oauth-basic
     branch: ((branch))
-
-- name: release
-  type: github-release
-  icon: github
-  source:
-    owner: ONS-Innovation
-    username: ((github_access_token))
-    password: x-oauth-basic
-    repository: keh-github-scraper-batch
-  check_every: 10m
 
 jobs:
 - name:  build-and-push
   public: true
   plan:
   - get: resource-repo
-    timeout: 5m
-  - get: release
-    trigger: true
     timeout: 5m
   - task: build-image
     privileged: true
@@ -37,7 +24,6 @@ jobs:
           repository: hashicorp/terraform
       inputs:
       - name: resource-repo
-      - name: release
       params:
         aws_account_id: ((aws_account_sdp_((env))))
         aws_role_arn: arn:aws:iam::((aws_account_sdp_((env)))):role/sdp-concourse-((env))
@@ -67,7 +53,6 @@ jobs:
         source: {repository: hashicorp/terraform}
       inputs:
       - name: resource-repo
-      - name: release
       params:
         secrets: ((sdp_((env))_github_policy_dashboard_secrets))
         github_access_token: ((github_access_token))
