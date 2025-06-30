@@ -4,7 +4,7 @@ import streamlit as st
 import os
 import boto3
 import github_api_toolkit
-from datetime import timedelta
+from datetime import timedelta, timezone
 from requests import Response
 from typing import Tuple
 
@@ -49,6 +49,7 @@ def get_last_modified(s3: boto3.client, bucket: str, filename: str) -> str | Non
     response = s3.head_object(Bucket=bucket, Key=filename)
     
     last_modified = response['LastModified']
+    last_modified = last_modified.replace(tzinfo=timezone.utc).astimezone(tz=None)
 
     if not last_modified:
         return None
