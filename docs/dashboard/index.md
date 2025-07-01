@@ -42,6 +42,10 @@ Displays metrics on Dependabot alerts.
 - **Repository Overview:** Provides a high-level view of the repositories with Dependabot alerts, including the number of alerts and their severity.
 - **Repository Severity Proportion:** Displays the proportion of alerts by severity for each repository, allowing users to identify the most critical issues.
 
+### Data Refreshing
+
+- Users can refresh the backend data manually by clicking the "Refresh Data" button in the sidebar. This will trigger the Data Logger to collect the latest data from GitHub and update the S3 bucket. This functionality is considerate of GitHub's API rate limits, ensuring that there is enough rate limit remaining before attempting to refresh the data. If the rate limit is exceeded, the user will be informed and the refresh will not proceed.
+
 ## Data Collection Process
 
 The Dashboard relies on the data collected by the Data Logger, which is responsible for gathering information from GitHub repositories and storing it in a database. The Data Logger runs periodically to ensure that the Dashboard has up-to-date information.
