@@ -27,7 +27,8 @@ if st.sidebar.button(
         status = refresh_data()
 
         if status["status"] == "success":
-            st.clear_cache()
+            # Clear cache to ensure fresh data is loaded
+            st.cache_data.clear()
             st.success(status["message"])
         else:
             st.error(status["message"])
