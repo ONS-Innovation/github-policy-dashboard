@@ -24,7 +24,12 @@ if st.sidebar.button(
     icon="🔄",
 ):
     with st.spinner("Refreshing dataset... This may take a few minutes."):
-        print("Refreshing dataset...")
-        refresh_data()
+        status = refresh_data()
+
+        if status["status"] == "success":
+            st.clear_cache()
+            st.success(status["message"])
+        else:
+            st.error(status["message"])
 
 pg.run()

@@ -1,14 +1,19 @@
 """A Python script to refresh the dataset for the GitHub Policy Dashboard."""
 
-import streamlit as st
+import botocore.config
 import boto3
+import botocore
 from requests import Response
 import datetime
 
 import utilities as utils
 
-def refresh_data():
-    """Refresh the dataset from GitHub."""
+def refresh_data() -> dict:
+    """A function to refresh the dataset for the GitHub Policy Dashboard.
+
+    Returns:
+        dict: A dictionary containing the status of the data refresh operation and a message.
+    """
 
     # Check GitHub API rate limit
     # If not enough rate limit, show error message and say when to try again
@@ -29,8 +34,7 @@ def refresh_data():
     response = rest.get("/rate_limit")
 
     if type(response) is not Response:
-        st.error("Error fetching rate limit from GitHub API.")
-        return
+        return {"status": "error", "message": "Error fetching rate limit from GitHub API."}
     
     rate_limit = response.json()
 
@@ -51,10 +55,7 @@ def refresh_data():
             remaining["rest"]["reset"]
         ).strftime("%H:%M")
 
-        st.error(
-            f"GitHub API rate limit exceeded. Please try again after {reset_time}."
-        )
-        return
+        return {"status": "error", "message": f"GitHub API rate limit exceeded. Please try again after {reset_time}."}
     
     if remaining["graphql"]["remaining"] < 8000:
 
@@ -62,14 +63,18 @@ def refresh_data():
             remaining["graphql"]["reset"]
         ).strftime("%H:%M")
 
-        st.error(
-            f"GitHub GraphQL API rate limit exceeded. Please try again after {reset_time}."
-        )
-        return
+        return {"status": "error", "message": f"GitHub GraphQL API rate limit exceeded. Please try again after {reset_time}."}
     
     # Proceed with data refresh
 
-    lambda_client = session.client("lambda", region_name=env["secret_region"])
+    lambda_config = botocore.config.Config(
+        read_timeout=900,  # 15 minutes (Maximum timeout for Lambda)
+        retries={
+            "total_max_attempts": 1,
+        }
+    )
+
+    lambda_client = session.client("lambda", region_name=env["secret_region"], config=lambda_config)
 
     response = lambda_client.invoke(
         FunctionName="policy-dashboard-lambda",
@@ -77,16 +82,9 @@ def refresh_data():
     )
 
     if response["StatusCode"] != 200:
-        st.error("Error invoking Lambda function to refresh dataset.")
-        return
+        return {"status": "error", "message": "Error invoking Lambda function to refresh dataset."}
     
     if "FunctionError" in response:
-        st.error("Error in Lambda function execution. Please check the logs.")
-        return
-    
-    st.success("Dataset refreshed successfully!")
+        return {"status": "error", "message": "Error in Lambda function execution."}
 
-    # Clear cache to ensure fresh data is loaded
-    st.cache_data.clear()
-
-    return
+    return {"status": "success", "message": "Dataset refreshed successfully!"}
