@@ -9,7 +9,6 @@ if [[ ${repo_name} == "github-policy-dashboard"]]; then
     echi "TEST 1"
     container_image=$(echo "$secrets" | jq -r .container_image)
     podman build -t ${container_image}:${tag} resource-repo
-
 else 
     echo "TEST 2"
     container_image=$(echo "$secrets" | jq -r .container_image_lambda)
