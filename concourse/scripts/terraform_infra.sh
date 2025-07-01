@@ -75,7 +75,7 @@ terraform apply \
 -var "lambda_timeout=$lambda_timeout" \
 -var "lambda_memory=$lambda_memory" \
 -var "lambda_version=${tag}" \
--var "schedule=$schedule \
+-var "schedule=$schedule" \
 -auto-approve
 
 fi
