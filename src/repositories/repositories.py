@@ -347,5 +347,9 @@ if len(selected_repo["selection"]["rows"]) > 0:
 
         else:
             st.write("No point of contact available.")
+
+            if env["org"] == "ONS-Innovation":
+                st.write("Points of contact are not available for ONS Innovation repositories.")
+
 else:
     st.caption("Select a repository for more information.")
