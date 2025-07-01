@@ -13,14 +13,18 @@ pg = st.navigation([
     st.Page("./repositories/repositories.py", title="Repositories", icon="📦"),
     st.Page("./secret_scanning/secret_scanning.py", title="Secret Scanning", icon="🔍"),
     st.Page("./dependabot/dependabot.py", title="Dependabot", icon="🤖"),
-])
+    ],
+    expanded=True,
+)
 
-st.sidebar.button(
+if st.sidebar.button(
     "Refresh Dataset",
     key="refresh_dataset",
-    on_click=refresh_data,
     help="Click to refresh the dataset from GitHub. This may take a few minutes.",
     icon="🔄",
-)
+):
+    with st.spinner("Refreshing dataset... This may take a few minutes."):
+        print("Refreshing dataset...")
+        refresh_data()
 
 pg.run()
