@@ -65,7 +65,7 @@ terraform apply \
 -var "aws_account_id=$aws_account_id" \
 -var "aws_access_key_id=$aws_access_key_id" \
 -var "aws_secret_access_key=$aws_secret_access_key" \
--var "env_name=$domain" \
+-var "environment_name=$domain" \
 -var "aws_secret_name=$aws_secret_name" \
 -var "github_org=$github_org" \
 -var "github_app_client_id=$github_app_client_id" \
