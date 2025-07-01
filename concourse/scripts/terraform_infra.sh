@@ -70,12 +70,6 @@ terraform apply \
 -var "github_org=$github_org" \
 -var "github_app_client_id=$github_app_client_id" \
 -var "container_image=$container_image" \
--var "lambda_name=$lambda_name" \
--var "lambda_arch=$lambda_arch" \
--var "lambda_timeout=$lambda_timeout" \
--var "lambda_memory=$lambda_memory" \
--var "lambda_version=${tag}" \
--var "schedule=$schedule" \
 -auto-approve
 
 fi
