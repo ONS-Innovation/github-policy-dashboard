@@ -61,6 +61,10 @@ resource "aws_ecs_task_definition" "ecs_service_definition" {
         {
           name  = "GITHUB_APP_CLIENT_ID"
           value = var.github_app_client_id
+        },
+        {
+          name  = "TZ"
+          value = "Europe/London"
         }
       ],
       logConfiguration = {
