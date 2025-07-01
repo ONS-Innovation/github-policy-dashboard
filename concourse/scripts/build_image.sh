@@ -3,15 +3,18 @@ set -euo pipefail
 export STORAGE_DRIVER=vfs
 export PODMAN_SYSTEMD_UNIT=concourse-task
 
-if [[ ${repo_name} == "github-policy-dashboard"]]; then
-    container_image=$(echo "$secrets" | jq -r .container_image)
-else 
-    container_image=$(echo "$secrets" | jq -r .container_image_lambda)
-fi
-
 aws ecr get-login-password --region eu-west-2 | podman --storage-driver=vfs login --username AWS --password-stdin ${aws_account_id}.dkr.ecr.eu-west-2.amazonaws.com
 
-podman build -t ${container_image}:${tag} resource-repo
+if [[ ${repo_name} == "github-policy-dashboard"]]; then
+    echi "TEST 1"
+    container_image=$(echo "$secrets" | jq -r .container_image)
+    podman build -t ${container_image}:${tag} resource-repo
+
+else 
+    echo "TEST 2"
+    container_image=$(echo "$secrets" | jq -r .container_image_lambda)
+    podman build -t ${container_image}:${tag} resource-repo/data_logger/
+fi
 
 podman tag ${container_image}:${tag} ${aws_account_id}.dkr.ecr.eu-west-2.amazonaws.com/${container_image}:${tag}
 
