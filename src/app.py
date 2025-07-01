@@ -1,7 +1,7 @@
 """The main application entry point for the GitHub Policy Dashboard."""
 
 import streamlit as st
-from src.refresh_data import refresh_data
+from refresh_data import refresh_data
 
 st.set_page_config(
     page_title="GitHub Policy Dashboard",
