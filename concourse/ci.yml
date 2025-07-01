@@ -64,6 +64,7 @@ jobs:
         args:
         - -cx
         - |
+          export repo_name=((repo_name))
           chmod u+x ./resource-repo/concourse/scripts/policy_util.sh
           source ./resource-repo/concourse/scripts/policy_util.sh
           if [[ "((env))" == "prod" ]]; then
