@@ -76,7 +76,6 @@ terraform apply \
 -var "aws_secret_name=$aws_secret_name" \
 -var "github_org=$github_org" \
 -var "github_app_client_id=$github_app_client_id" \
--var "container_image=$container_image" \
 -var "lambda_name=$lambda_name" \
 -var "lambda_arch=$lambda_arch" \
 -var "lambda_timeout=$lambda_timeout" \
