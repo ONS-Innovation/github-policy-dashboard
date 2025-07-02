@@ -37,11 +37,13 @@ fi
 
 echo ${env}
 
+
+
+if [[ ${repo_name} == "github-policy-dashboard" ]]; then
+
 cd resource-repo/terraform/dashboard
 
 terraform init -backend-config=env/${env}/backend-${env}.tfbackend -reconfigure
-
-if [[ ${repo_name} == "github-policy-dashboard" ]]; then
 
 terraform apply \
 -var "aws_account_id=$aws_account_id" \
@@ -58,8 +60,13 @@ terraform apply \
 -var "container_port=$container_port" \
 -var "from_port=$from_port" \
 -auto-approve
+
     
 else 
+
+cd resource-repo/terraform/data_logger
+
+terraform init -backend-config=env/${env}/backend-${env}.tfbackend -reconfigure
 
 terraform apply \
 -var "aws_account_id=$aws_account_id" \
@@ -77,5 +84,6 @@ terraform apply \
 -var "lambda_version=${tag}" \
 -var "schedule=$schedule" \
 -auto-approve
+
 
 fi
