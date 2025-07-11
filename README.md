@@ -312,6 +312,53 @@ To run mypy (static type checking)
 make mypy
 ```
 
+### Deployments with Concourse
+
+#### Allowlisting your IP
+
+To setup the deployment pipeline with concourse, you must first allowlist your IP address on the Concourse
+server. IP addresses are flushed everyday at 00:00 so this must be done at the beginning of every working day
+whenever the deployment pipeline needs to be used. Follow the instructions on the Confluence page (SDP Homepage > SDP Concourse > Concourse Login) to
+login. All our pipelines run on sdp-pipeline-prod, whereas sdp-pipeline-dev is the account used for
+changes to Concourse instance itself. Make sure to export all necessary environment variables from sdp-pipeline-prod (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN).
+
+#### Setting up a pipeline
+
+When setting up our pipelines, we use ecs-infra-user on sdp-dev to be able to interact with our infrastructure on AWS. The credentials for this are stored on
+AWS Secrets Manager so you do not need to set up anything yourself. Since this repository has two services that need to be deployed, you can set up a seprate
+pipeline for each by either specifying the pipeline name as `github-policy-dashboard` or `github-policy-lambda`.
+
+To set the pipeline, run the following script:
+
+```bash
+chmod u+x ./concourse/scripts/set_pipeline.sh
+./concourse/scripts/set_pipeline.sh github-policy-dashboard # for policy dashboard
+./concourse/scripts/set_pipeline.sh github-policy-lambda # for policy lambda
+
+```
+
+Note that you only have to run chmod the first time running the script in order to give permissions.
+This script will set the branch and pipeline name to whatever branch you are currently on. It will also set the image tag on ECR to the current commit hash at the time of setting the pipeline.
+
+The pipeline name itself will usually follow a pattern as follows: `<repo-name>-<branch-name>`
+If you wish to set a pipeline for another branch without checking out, you can run the following:
+
+```bash
+./concourse/scripts/set_pipeline.sh github-policy-dashboard <branch_name> # For policy dashboard
+./concourse/scripts/set_pipeline.sh github-policy-lambda <branch_name> # For policy lambda
+```
+
+If the branch you are deploying is "main" or "master", it will trigger a deployment to the sdp-prod environment. To set the ECR image tag, you must draft a Github release pointing to the latest release of the main/master branch that has a tag in the form of vX.Y.Z. Drafting up a release will automatically deploy the latest version of the main/master branch with the associated release tag, but you can also manually trigger a build through the Concourse UI or the terminal prompt.
+
+#### Triggering a pipeline
+
+Once the pipeline has been set, you can manually trigger a build on the Concourse UI, or run the following command:
+
+```bash
+fly -t aws-sdp trigger-job -j github-policy-dashboard-<branch-name>/build-and-push # For policy dashboard
+fly -t aws-sdp trigger-job -j github-policy-lambda-<branch-name>/build-and-push # For policy lambda
+```
+
 ### Markdown Linting
 
 To lint the markdown files in this repository, we use `markdownlint-cli`. This repository uses the Dockerised version of the linter, allowing it to be run without needing to install it locally.
