@@ -336,6 +336,7 @@ chmod u+x ./concourse/scripts/set_pipeline.sh
 ./concourse/scripts/set_pipeline.sh github-policy-lambda # for policy lambda
 
 ```
+
 Note that you only have to run chmod the first time running the script in order to give permissions.
 This script will set the branch and pipeline name to whatever branch you are currently on. It will also set the image tag on ECR to the current commit hash at the time of setting the pipeline.
 
