@@ -33,11 +33,14 @@ jobs:
         args:
         - -cx
         - |
+          apk add --no-cache aws-cli podman jq iptables curl
+
           export repo_name=((repo_name))
           chmod u+x ./resource-repo/concourse/scripts/policy_util.sh
           source ./resource-repo/concourse/scripts/policy_util.sh
           if [[ "((env))" == "prod" ]]; then
-            export tag=v$(cat release/version)
+            tag=$(curl "https://api.github.com/repos/ONS-Innovation/github-policy-dashboard/releases" | jq -r '.[0].tag_name')
+            export tag
           else
             export tag=((tag))
           fi
@@ -64,11 +67,14 @@ jobs:
         args:
         - -cx
         - |
+          apk add --no-cache jq curl
+
           export repo_name=((repo_name))
           chmod u+x ./resource-repo/concourse/scripts/policy_util.sh
           source ./resource-repo/concourse/scripts/policy_util.sh
           if [[ "((env))" == "prod" ]]; then
-            export tag=v$(cat release/version)
+            tag=$(curl "https://api.github.com/repos/ONS-Innovation/github-policy-dashboard/releases" | jq -r '.[0].tag_name')
+            export tag
           else 
             export tag=((tag))
           fi
