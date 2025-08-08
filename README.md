@@ -318,7 +318,7 @@ make mypy
 
 #### Allowlisting your IP
 
-To setup the deployment pipeline with concourse, you must first allowlist your IP address on the Concourse server. IP addresses are flushed everyday at 00:00 so this must be done at the beginning of every working day whenever the deployment pipeline needs to be used.
+To setup the deployment pipeline with Concourse, you must first allowlist your IP address on the Concourse server. IP addresses are flushed everyday at 00:00 so this must be done at the beginning of every working day whenever the deployment pipeline needs to be used.
 
 Follow the instructions on the Confluence page (SDP Homepage > SDP Concourse > Concourse Login) to login.
 
