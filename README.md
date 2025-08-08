@@ -91,7 +91,7 @@ export AWS_ACCOUNT_NAME=sdp-dev
     github-policy-dashboard                                                    latest      9a9cb9286a7f   51 seconds ago   906MB
     ```
 
-3. Run the image locally mapping local port 8501 to container port 8501 and passing in AWS credentials to access a .pem file from AWS Secrets Manager while running container.
+3. Run the image locally mapping local port 8501 to container port 8501 and passing in AWS credentials to access a `.pem` file from AWS Secrets Manager while running container.
 These credentials should also allow access to S3.
 
     ```bash
@@ -139,8 +139,8 @@ When you make changes to the dashboard, a new container image must be pushed to 
 
 These instructions assume:
 
-1. You have a repository set up in your AWS account named github-audit-dashboard.
-2. You have created an AWS IAM user with permissions to read/write to ECR (e.g AmazonEC2ContainerRegistryFullAccess policy) and that you have created the necessary access keys for this user.  The credentials for this user are stored in ~/.aws/credentials and can be used by accessing --profile <aws-credentials-profile\>, if these are the only credentials in your file then the profile name is _default_
+1. You have a repository set up in your AWS account named `github-audit-dashboard`.
+2. You have created an AWS IAM user with permissions to read/write to ECR (e.g `AmazonEC2ContainerRegistryFullAccess` policy) and that you have created the necessary access keys for this user.  The credentials for this user are stored in `~/.aws/credentials` and can be used by accessing `--profile <aws-credentials-profile\>`, if these are the only credentials in your file then the profile name is _default_
 
 You can find the AWS repo push commands under your repository in ECR by selecting the "View Push Commands" button.  This will display a guide to the following (replace <aws-credentials-profile\>, <aws-account-id\> and <version\> accordingly):
 
@@ -150,7 +150,7 @@ You can find the AWS repo push commands under your repository in ECR by selectin
     aws ecr --profile <aws-credentials-profile> get-login-password --region eu-west-2 | docker login --username AWS --password-stdin <aws-account-id>.dkr.ecr.eu-west-2.amazonaws.com
     ```
 
-2. Tag your latest built docker image for ECR (assumes you have run _docker build -t github-audit-dashboard ._ locally first)
+2. Tag your latest built docker image for ECR (assumes you have run `docker build -t github-audit-dashboard .` locally first)
 
     ```bash
     docker tag github-audit-dashboard:latest <aws-account-id>.dkr.ecr.eu-west-2.amazonaws.com/github-audit-dashboard:<version>
@@ -189,16 +189,16 @@ That infrastructure is defined in the repository [sdp-infrastructure](https://gi
 
 The following users must be provisioned in AWS IAM:
 
-- ecr-user
+- `ecr-user`
   - Used for interaction with the Elastic Container Registry from AWS cli
-- ecs-app-user
-  - Used for terraform staging of the resources required to deploy the service
+- `ecs-app-user`
+  - Used for Terraform staging of the resources required to deploy the service
 
 The following groups and permissions must be defined and applied to the above users:
 
-- ecr-user-group
+- `ecr-user-group`
   - EC2 Container Registry Access
-- ecs-application-user-group
+- `ecs-application-user-group`
   - Dynamo DB Access
   - EC2 Access
   - ECS Access
@@ -211,36 +211,38 @@ The following groups and permissions must be defined and applied to the above us
 
 Further to the above an IAM Role must be defined to allow ECS tasks to be executed:
 
-- ecsTaskExecutionRole
+- `ecsTaskExecutionRole`
   - See the [AWS guide to create the task execution role policy](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_execution_IAM_role.html)
 
 #### Bootstrap for Terraform
 
-To store the state and implement a state locking mechanism for the service resources a Terraform backend is deployed in AWS (an S3 object and DynamoDbTable).
+To store the state and implement a state locking mechanism for the service resources, a Terraform backend is deployed in AWS (an S3 object and DynamoDbTable).
 
 #### Running the Terraform
 
 There are associated README files in each of the Terraform modules in this repository.  
 
-- terraform/dashboard/main.tf
+- `terraform/dashboard/main.tf`
   - This provisions the resources required to launch the service.
-- terraform/data_logger/main.tf
+- `terraform/data_logger/main.tf`
   - This provisions the resources required to launch the Policy Dashboard's data collection Lambda script (data logger).
-- terraform/authentication/main.tf
+- `terraform/authentication/main.tf`
   - This provisions the Cognito authentication used by the service.
 
-Depending upon which environment you are deploying to you will want to run your terraform by pointing at an appropriate environment tfvars file.  
+Depending upon which environment you are deploying to, you will want to run your Terraform by pointing at an appropriate environment `tfvars` file.  
 
 Example dashboard tfvars file:
 [dashboard/env/dev/example_tfvars.txt](./terraform/dashboard/env/dev/example_tfvars.txt)
+
 Example data_logger tfvars file:
 [data_logger/env/dev/example_tfvars.txt](./terraform/data_logger/env/dev/example_tfvars.txt)
+
 Example authentication tfvars file:
 [authentication/env/dev/example_tfvars.txt](./terraform/authentication/env/dev/example_tfvars.txt)
 
 #### Provision Users
 
-When the service is first deployed an admin user must be created in the Cognito User Pool that was created when the authentication terraform was applied.
+When the service is first deployed, an admin user must be created in the Cognito User Pool that was created when the authentication Terraform was applied.
 
 New users are manually provisioned in the AWS Console:
 
@@ -316,16 +318,16 @@ make mypy
 
 #### Allowlisting your IP
 
-To setup the deployment pipeline with concourse, you must first allowlist your IP address on the Concourse
-server. IP addresses are flushed everyday at 00:00 so this must be done at the beginning of every working day
-whenever the deployment pipeline needs to be used. Follow the instructions on the Confluence page (SDP Homepage > SDP Concourse > Concourse Login) to
-login. All our pipelines run on sdp-pipeline-prod, whereas sdp-pipeline-dev is the account used for
-changes to Concourse instance itself. Make sure to export all necessary environment variables from sdp-pipeline-prod (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN).
+To setup the deployment pipeline with concourse, you must first allowlist your IP address on the Concourse server. IP addresses are flushed everyday at 00:00 so this must be done at the beginning of every working day whenever the deployment pipeline needs to be used. 
+
+Follow the instructions on the Confluence page (SDP Homepage > SDP Concourse > Concourse Login) to login. 
+
+All our pipelines run on `sdp-pipeline-prod`, whereas `sdp-pipeline-dev` is the account used for changes to Concourse instance itself. Make sure to export all necessary environment variables from `sdp-pipeline-prod` (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN).
 
 #### Setting up a pipeline
 
-When setting up our pipelines, we use ecs-infra-user on sdp-dev to be able to interact with our infrastructure on AWS. The credentials for this are stored on
-AWS Secrets Manager so you do not need to set up anything yourself. Since this repository has two services that need to be deployed, you can set up a seprate
+When setting up our pipelines, we use `ecs-infra-user` on `sdp-dev` to be able to interact with our infrastructure on AWS. The credentials for this are stored on
+AWS Secrets Manager so you do not need to set up anything yourself. Since this repository has two services that need to be deployed, you can set up a separate
 pipeline for each by either specifying the pipeline name as `github-policy-dashboard` or `github-policy-lambda`.
 
 To set the pipeline, run the following script:
@@ -348,7 +350,7 @@ If you wish to set a pipeline for another branch without checking out, you can r
 ./concourse/scripts/set_pipeline.sh github-policy-lambda <branch_name> # For policy lambda
 ```
 
-If the branch you are deploying is "main" or "master", it will trigger a deployment to the sdp-prod environment. To set the ECR image tag, you must draft a Github release pointing to the latest release of the main/master branch that has a tag in the form of vX.Y.Z. Drafting up a release will automatically deploy the latest version of the main/master branch with the associated release tag, but you can also manually trigger a build through the Concourse UI or the terminal prompt.
+If the branch you are deploying is `main`, it will trigger a deployment to the `sdp-prod` environment. To set the ECR image tag, you must draft a GitHub release pointing to the latest release of the `main` branch that has a tag in the form of `vX.Y.Z`. Drafting up a release will automatically deploy the latest version of the `main` branch with the associated release tag, but you can also manually trigger a build through the Concourse UI or the terminal prompt.
 
 #### Triggering a pipeline
 
