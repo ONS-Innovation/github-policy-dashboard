@@ -232,11 +232,11 @@ There are associated README files in each of the Terraform modules in this repos
 Depending upon which environment you are deploying to you will want to run your terraform by pointing at an appropriate environment tfvars file.  
 
 Example dashboard tfvars file:
-[dashboard/env/sandbox/example_tfvars.txt](./terraform/dashboard/env/sandbox/example_tfvars.txt)
+[dashboard/env/dev/example_tfvars.txt](./terraform/dashboard/env/dev/example_tfvars.txt)
 Example data_logger tfvars file:
-[data_logger/env/sandbox/example_tfvars.txt](./terraform/data_logger/env/sandbox/example_tfvars.txt)
+[data_logger/env/dev/example_tfvars.txt](./terraform/data_logger/env/dev/example_tfvars.txt)
 Example authentication tfvars file:
-[authentication/env/sandbox/example_tfvars.txt](./terraform/authentication/env/sandbox/example_tfvars.txt)
+[authentication/env/dev/example_tfvars.txt](./terraform/authentication/env/dev/example_tfvars.txt)
 
 #### Provision Users
 
