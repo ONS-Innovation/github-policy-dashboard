@@ -11,7 +11,7 @@ The service terraform is bootstrapped with a separate terraform state key so tha
 Depending upon which environment you are deploying to you will want to run your terraform by pointing at an appropriate environment tfvars file.  
 
 Example service tfvars file:
-[dashboard/env/sandbox/example_tfvars.txt](./env/sandbox/example_tfvars.txt)
+[dashboard/env/dev/example_tfvars.txt](./env/dev/example_tfvars.txt)
 
 ### Update Existing Service
 

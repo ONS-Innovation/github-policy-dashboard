@@ -2,4 +2,4 @@
 aws_account_id        = "99999999999"
 aws_access_key_id     = "AWSACCCESSKEYID"
 aws_secret_access_key = "AWSSECRETASSOCIATEDWITHACCESSKEY"
-domain                = "sdp-sandbox"
+domain                = "sdp-dev"
