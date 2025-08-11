@@ -222,7 +222,7 @@ There are 2 parts to deployment:
 
 Before following the instructions below, we assume that:
 
-- An ECR repository exists on AWS that aligns with the Lambda's naming convention, `{env_name}-{lambda_name}` (these can be set within the `.tfvars` file. See [example_tfvars.txt](../terraform/data_logger/env/sandbox/example_tfvars.txt)).
+- An ECR repository exists on AWS that aligns with the Lambda's naming convention, `{env_name}-{lambda_name}` (these can be set within the `.tfvars` file. See [example_tfvars.txt](../terraform/data_logger/env/dev/example_tfvars.txt)).
 - The AWS account contains underlying infrastructure to deploy on top of. This infrastructure is defined within [sdp-infrastructure](https://github.com/ONS-Innovation/sdp-infrastructure) on GitHub.
 - An AWS IAM user has been setup with appropriate permissions.
 
@@ -313,7 +313,7 @@ Within the terraform directory, there is a [service](../terraform/data_logger/) 
     - `env/dev/dev.tfvars` for sdp-dev.
     - `env/prod/prod.tfvars` for sdp-prod.
 
-    These files can be created based on [`example_tfvars.txt`](../terraform/data_logger/env/sandbox/example_tfvars.txt).
+    These files can be created based on [`example_tfvars.txt`](../terraform/data_logger/env/dev/example_tfvars.txt).
 
     **It is crucial that the completed `.tfvars` file does not get committed to GitHub.**
 
