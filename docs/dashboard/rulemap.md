@@ -26,13 +26,13 @@ The `rulemap.json` file is a JSON object containing an array of rule objects. Ea
 
 ###  Fields
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `name` | String | The name of the rule. This should match the name used in `repositories.json`. |
-| `description` | String | A detailed description of the rule, explaining what it checks and when it applies. |
-| `is_security_rule` | bool | Indicates if the rule is a security rule. If true, the rule will be included in the Security Preset. |
-| `is_policy_rule` | bool | Indicates if the rule is a policy rule. If true, the rule will be included in the Policy Preset. |
-| `note` | String | Additional notes or comments about the rule. This is mainly used to explain what happens to repositories that the check doesn't run on (i.e. if a check is only for public repositories, this rule would explain that private/internal repositories automatically pass the check). |
+|Field|Type|Description|
+|------|----|-----------|
+|`name`|String|The name of the rule. This should match the name used in `repositories.json`.|
+|`description`|String|A detailed description of the rule, explaining what it checks and when it applies.|
+|`is_security_rule`|bool|Indicates if the rule is a security rule. If true, the rule will be included in the Security Preset.|
+|`is_policy_rule`|bool|Indicates if the rule is a policy rule. If true, the rule will be included in the Policy Preset.|
+|`note`|String|Additional notes or comments about the rule. This is mainly used to explain what happens to repositories that the check doesn't run on (i.e. if a check is only for public repositories, this rule would explain that private/internal repositories automatically pass the check).|
 
 ###  Example
 
