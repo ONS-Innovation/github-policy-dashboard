@@ -785,29 +785,44 @@ def get_dependabot_data_for_severity(logger: wrapped_logging, rest: github_api_t
 
     # Get the threshold for the given severity
 
-
     response = rest.get(f"/orgs/{org}/dependabot/alerts", {"state": "open", "severity": severity, "per_page": 100})
 
     if type(response) is not Response:
         raise Exception(response)
 
-    try:
-        last_page = int(response.links["last"]["url"].split("=")[-1])
-    except KeyError:
-        last_page = 1
+    page_no = 1
+    has_next_page = True
+    next_page = response.links.get("next", None)
 
-    for page in range(1, last_page + 1):
-        logger.log_info(f"Processing page {page} / {last_page} of Dependabot alerts for {severity} severity. Using {thread_name}.")
+    if not next_page:
+        logger.log_info(f"Only one page of Dependabot alerts for {severity} severity. Using {thread_name}.")
+        has_next_page = False
 
-        response = rest.get(f"/orgs/{org}/dependabot/alerts", {"state": "open", "per_page": 100, "severity": severity, "page": page})
+    # Process and store the first page
+    response_json = response.json()
+    response_json = process_dependabot_alerts(response_json, threshold)
+    dependabot_data.extend(response_json)
+
+    # After the first page, recursively get the next pages
+    # process each page and store the data
+    while has_next_page:
+        page_no += 1
+        next_page_url = next_page["url"]
+
+        logger.log_info(f"Processing page {page_no} of Dependabot alerts for {severity} severity. Using {thread_name}.")
+
+        response = rest.get(next_page_url, add_prefix=False)
 
         if type(response) is not Response:
             raise Exception(response)
-        
+
+        next_page = response.links.get("next", None)
+
+        if not next_page:
+            has_next_page = False
+
         response_json = response.json()
-
         response_json = process_dependabot_alerts(response_json, threshold)
-
         dependabot_data.extend(response_json)
 
     return dependabot_data
