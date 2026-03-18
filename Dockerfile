@@ -10,15 +10,15 @@ WORKDIR /app
 # Copy the current directory contents into the container at /app
 COPY . /app
 
+# Run as non-root user for security
+RUN useradd -m appuser
+USER appuser
+
 # Run poetry install --without dev
 RUN poetry install --only main --no-root 
 
 # Expose the port the app runs on
 EXPOSE 8501
-
-# Run as non-root user for security
-RUN useradd -m appuser
-USER appuser
 
 # Run the dashboard
 # Note: ENTRYPOINT cannot be overriden by docker run command
