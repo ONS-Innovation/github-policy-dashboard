@@ -10,6 +10,10 @@ WORKDIR /app
 # Copy the current directory contents into the container at /app
 COPY . /app
 
+# Run as non-root user for security
+RUN useradd -m appuser
+USER appuser
+
 # Run poetry install --without dev
 RUN poetry install --only main --no-root 
 

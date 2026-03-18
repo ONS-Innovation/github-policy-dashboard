@@ -33,6 +33,7 @@ resource "aws_ecs_task_definition" "ecs_service_definition" {
           appProtocol   = "http"
         }
       ],
+      readonlyRootFilesystem = true,
       environment = [
         {
           name  = "AWS_ACCESS_KEY_ID"
@@ -117,10 +118,7 @@ resource "aws_ecs_service" "application" {
   network_configuration {
     subnets         = data.terraform_remote_state.ecs_infrastructure.outputs.private_subnets
     security_groups = [aws_security_group.allow_rules_service.id]
-
-    # TODO: The container fails to launch unless a public IP is assigned
-    # For a private ip, you would need to use a NAT Gateway?
-    assign_public_ip = true
+    assign_public_ip = false
   }
 
 }
