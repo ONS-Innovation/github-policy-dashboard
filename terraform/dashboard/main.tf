@@ -33,6 +33,7 @@ resource "aws_ecs_task_definition" "ecs_service_definition" {
           appProtocol   = "http"
         }
       ],
+      readonlyRootFilesystem = true,
       environment = [
         {
           name  = "AWS_ACCESS_KEY_ID"
