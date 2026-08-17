@@ -2,6 +2,16 @@
 
 A dashboard which uses organisation data from the GitHub API to monitor how well policy is adhered to in ONS.
 
+## Archive Notice
+
+This repository is no longer active or maintained. The Proof of Concept in this repository has been replace by KEH's GitHub Policy Reports functionality.
+
+This functionality can be found in the following repositories:
+
+- [**Policy Methods Library**](https://github.com/ONS-Innovation/keh-policy-methods-library): A shared Python library containing policy checks based on the GitHub Usage Policy. This is used across KEH Policy Tooling to encapsulate business logic.
+- [**GitHub Policy Audit**](https://github.com/ONS-Innovation/keh-github-policy-audit): A data collection service to gather, collate and store organisation compliance with the GitHub Usage Policy. This makes use of the Methods Library above.
+- [**Digital Landscape**](https://github.com/ONSdigital/keh-digital-landscape): A web application which includes GitHub Policy Report functionality, allowing users to generate, download and view compliance reports. This makes use of the Policy Audit tool above.
+
 ## Overview
 
 This repository contains 2 main elements:
@@ -12,6 +22,7 @@ This repository contains 2 main elements:
 ## Table of Contents
 
 - [GitHub Policy Dashboard](#github-policy-dashboard)
+  - [Archive Notice](#archive-notice)
   - [Overview](#overview)
   - [Table of Contents](#table-of-contents)
   - [Prerequisites](#prerequisites)
@@ -28,6 +39,10 @@ This repository contains 2 main elements:
       - [Provision Users](#provision-users)
     - [Updating the running service using Terraform](#updating-the-running-service-using-terraform)
   - [Linting and Formatting](#linting-and-formatting)
+    - [Deployments with Concourse](#deployments-with-concourse)
+      - [Allowlisting your IP](#allowlisting-your-ip)
+      - [Setting up a pipeline](#setting-up-a-pipeline)
+      - [Triggering a pipeline](#triggering-a-pipeline)
     - [Markdown Linting](#markdown-linting)
       - [Usage](#usage)
       - [`.markdownlint.json` Configuration](#markdownlintjson-configuration)
